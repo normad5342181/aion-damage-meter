@@ -1,0 +1,9 @@
+1.第一次使用需开启chat.log日志文本（之前用过其他统计的可跳过）
+2.开启chat.log日志方法：复制cfg_patch.exe至永恒之塔根目录，运行cfg_patch.exe按提示操作
+3.运行sep.exe 第一次点击-启动-在AION根目录下找到chat.log打开即可。
+
+
+
+木老师 2014-10-13
+（怀旧服开启chat.log日志方法：复制cfg_patch.exe至永恒之塔目录的 aionclassic文件夹，运行cfg_patch.exe按提示操作）
+贴吧磁爆法王2021-10-24

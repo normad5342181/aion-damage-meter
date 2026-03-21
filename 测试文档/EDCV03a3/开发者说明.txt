@@ -1,0 +1,6 @@
+getlog.dll函数可以在高压力下完成读取日志中的一行
+入口函数
+void SetName(char * A)设置文件名并打开文件
+void End()读取位置移动到文件尾
+char *Get()读取一行，不成功（文件结尾没有完整的一行）返回""
+void Close()关闭文件

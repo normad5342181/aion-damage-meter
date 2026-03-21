@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "types": [
+            "../../types"
+        ],
+        "strict": true,
+        "target": "ESNext",
+        "module": "ESNext",
+        "outDir": "../../dist-electron",
+        "skipLibCheck": true,
+        "moduleResolution": "bundler"
+    },
+}

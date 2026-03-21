@@ -1,0 +1,25 @@
+{
+    "appId": "com.n-z.electron",
+    "extraResources": [
+        "dist-electron/preload.cjs",
+        "src/assets/**"
+    ],
+    "files": [
+        "dist-electron",
+        "dist-react"
+    ],
+    "icon": "./desktopIcon.png",
+    "mac": {
+        "target": "dmg"
+    },
+    "linux": {
+        "target": "AppImage",
+        "category": "Utility"
+    },
+    "win": {
+        "target": [
+            "portable",
+            "msi"
+        ]
+    }
+}

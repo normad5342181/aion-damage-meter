@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Button, message, Spin, Upload, UploadFile, UploadProps } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
+import { AnalyzedResult } from "../worker/read-log/types";
+import { DamageMeter } from "./types";
 // import ReadLogWorkerScript from "../worker/read-log/readLog";
 const { Dragger } = Upload;
 
@@ -16,12 +17,69 @@ function App() {
       new URL("../worker/read-log/readLog.ts", import.meta.url),
       {
         type: "module",
-      }
+      },
     );
     processRef.current.onmessage = (res) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      message.success("日志解析完成" + res.data.count.map((i: any) => i.name));
-      setPageLoading(false);
+      if (res.data.type === "log-result") {
+        message.success("日志初步解析完成");
+
+        const resData: AnalyzedResult = res.data.data;
+
+        const damageObject: Record<string, DamageMeter> = {};
+        for (let index = 0; index < resData.logList.length; index++) {
+          const log = resData.logList[index];
+          if (log.damageDetail) {
+            const damageDetail = log.damageDetail;
+            const source = damageDetail.sourceName;
+            // 已有的伤害来源
+            if (damageObject[source]) {
+              damageObject[source].damageSummary.count += damageDetail.damage;
+            } else {
+              damageObject[source] = {
+                damageSummary: {
+                  count: damageDetail.damage,
+                },
+              };
+            }
+          }
+        }
+
+        console.log("总体伤害统计:", damageObject);
+
+        const skillObject: Record<
+          string,
+          { name: string; times: number; damage: number }[]
+        > = {};
+        for (let index = 0; index < resData.skillList.length; index++) {
+          const skill = resData.skillList[index];
+          const playerSkills = skillObject[skill.sourceName];
+          if (playerSkills) {
+            const fs = playerSkills.find((x) => x.name === skill.skillName);
+            if (fs) {
+              fs.times += 1;
+              fs.damage += skill.damage || 0;
+            } else {
+              playerSkills.push({
+                name: skill.skillName,
+                times: 1,
+                damage: skill.damage || 0,
+              });
+            }
+          } else {
+            skillObject[skill.sourceName] = [
+              {
+                name: skill.skillName,
+                times: 1,
+                damage: skill.damage || 0,
+              },
+            ];
+          }
+        }
+
+        console.log("分技能统计:", skillObject);
+
+        setPageLoading(false);
+      }
     };
 
     processRef.current.onerror = (res) => {
@@ -82,10 +140,17 @@ function App() {
   return (
     <Spin spinning={pageLoading} description="数据处理中...">
       <Dragger {...props}>
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
+        <p
+          style={{
+            display: "flex",
+            height: 300,
+            width: 500,
+            justifyContent: "center",
+          }}
+          className="ant-upload-text"
+        >
+          点击或拖拽日志文件到此区域
         </p>
-        <p className="ant-upload-text">点击或拖拽日志文件到此区域</p>
       </Dragger>
 
       <div style={{ marginTop: 30 }}>

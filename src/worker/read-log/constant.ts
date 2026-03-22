@@ -9,3 +9,5 @@ export const bosses = [
 export const PLAYER_SELF = "自己";
 
 export const NORMAL_ATTACK = "普通攻击";
+
+export const UNKNOWN_DOT_SOURCE = "未知的DOT释放者";

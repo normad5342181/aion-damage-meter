@@ -26,3 +26,24 @@ export interface Tag {
   dateTime: string;
   label: string;
 }
+
+export interface DotSkill {
+  dateTime: string;
+  sourceName: string;
+  skillName: string;
+  targetName: string;
+}
+
+export interface Skill {
+  dateTime: string;
+  sourceName: string;
+  skillName: string;
+  targetName: string;
+  damage?: number;
+}
+
+export interface AnalyzedResult {
+  logList: Log[];
+  tagList: Tag[];
+  skillList: Skill[];
+}

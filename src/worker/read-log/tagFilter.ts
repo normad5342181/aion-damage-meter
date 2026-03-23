@@ -5,11 +5,11 @@ import { Tag } from "./types";
 const mapChangeRegex = /^进入了(.+?)地区频道。/;
 // 开始攻击命名怪的正则
 const firstAttackRegex = new RegExp(
-  `对(${bosses.map((boss) => boss.name).join("|")})造成了${"(.+?)"}的伤害`
+  `对(${bosses.map((boss) => boss.name).join("|")})造成了${"(.+?)"}的伤害`,
 );
 // 命名怪倒地的正则
 const bossDeadRegex = new RegExp(
-  `从(${bosses.map((boss) => boss.name).join("|")})获得了${"(.+?)"}的经验值`
+  `从(${bosses.map((boss) => boss.name).join("|")})获得了${"(.+?)"}的经验值`,
 );
 // 整点时间正则
 const hourlyRegex = /^\d{4}\.\d{2}\.\d{2} \d{2}:00:00$/;
@@ -31,6 +31,7 @@ export function tagFilter(logTime: string, logContent: string, tagList: Tag[]) {
     const tag: Tag = {
       dateTime: logTime,
       label: "进图：" + mapChangeMatch[1],
+      type: "changeMap",
     };
     tagList.push(tag);
     matched = true;
@@ -47,6 +48,7 @@ export function tagFilter(logTime: string, logContent: string, tagList: Tag[]) {
     const tag: Tag = {
       dateTime: logTime,
       label: "开始攻击" + firstAttackMatch[1],
+      type: "bossStart",
     };
     tagList.push(tag);
     usedBosses.push(firstAttackMatch[1]);
@@ -60,6 +62,7 @@ export function tagFilter(logTime: string, logContent: string, tagList: Tag[]) {
     const tag: Tag = {
       dateTime: logTime,
       label: thisMatch[1] + "倒地",
+      type: "bossEnd",
     };
     tagList.push(tag);
     matched = true;
@@ -71,6 +74,7 @@ export function tagFilter(logTime: string, logContent: string, tagList: Tag[]) {
     const tag: Tag = {
       dateTime: logTime,
       label: "拾取塔哈巴塔证物",
+      type: "special",
     };
     tagList.push(tag);
     matched = true;
@@ -86,6 +90,7 @@ export function tagFilter(logTime: string, logContent: string, tagList: Tag[]) {
       const tag: Tag = {
         dateTime: logTime,
         label: "整点:" + logTime,
+        type: "hourly",
       };
       tagList.push(tag);
       usedHourlyTag.push(logTime);

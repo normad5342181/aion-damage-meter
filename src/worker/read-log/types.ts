@@ -28,6 +28,7 @@ export interface Log {
 export interface Tag {
   dateTime: string;
   label: string;
+  type?: string;
 }
 
 export interface DotSkill {

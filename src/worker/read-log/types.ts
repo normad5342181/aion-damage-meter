@@ -1,7 +1,10 @@
+import { Race, Role } from "./constant";
+
 export interface MessageData {
   id: string;
   type: string;
   file: File;
+  dateTimeRange?: [string, string];
 }
 
 export interface Log {
@@ -42,8 +45,18 @@ export interface Skill {
   damage?: number;
 }
 
+export interface DamageSource {
+  name: string;
+  usedSkill: string[];
+  role?: Role;
+  race?: Race;
+}
+
 export interface AnalyzedResult {
+  startTime: string;
+  endTime: string;
   logList: Log[];
   tagList: Tag[];
-  skillList: Skill[];
+  skillMap: Map<string, Skill>;
+  damageSourceMap: Map<string, DamageSource>;
 }

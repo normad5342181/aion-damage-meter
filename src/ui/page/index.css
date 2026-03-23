@@ -1,0 +1,34 @@
+.log-result-layout {
+  height: 100%;
+  width: 100%;
+}
+.log-result-sider {
+  background-color: #fff;
+  height: 100%;
+}
+
+.log-result-select-date {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+
+  justify-content: space-between;
+}
+
+.log-result-select-date .log-result-select-date-range {
+  height: calc(100% - 80px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.log-result-select-date
+  .log-result-select-date-range
+  .log-result-select-date-range-container {
+  height: 100%;
+}
+
+.log-result-select-date .ant-slider-mark-text span {
+  text-overflow: hidden;
+  overflow: hidden;
+  white-space: nowrap;
+}

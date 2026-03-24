@@ -1,7 +1,3 @@
-export function calcTimeDifference(startTime: string, endTime: string) {
-  return new Date(endTime).getTime() - new Date(startTime).getTime();
-}
-
 /**
  * 根据时间戳差值计算项目高度
  *
@@ -13,11 +9,11 @@ export function calcTimeDifference(startTime: string, endTime: string) {
 export function calcTimelineItemHeight(
   startTime: number | string,
   endTime: number | string,
-  baseHeight: number = 50,
+  baseHeight: number = 50
 ): number {
   // 确保时间差为正数
   const duration = Math.abs(
-    new Date(endTime).getTime() - new Date(startTime).getTime(),
+    new Date(endTime).getTime() - new Date(startTime).getTime()
   );
 
   // 定义时间阈值 (毫秒)

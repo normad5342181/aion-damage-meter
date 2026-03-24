@@ -4,7 +4,7 @@ export interface MessageData {
   id: string;
   type: string;
   file: File;
-  dateTimeRange?: [string, string];
+  dateTimeRange?: [number, number];
 }
 
 export interface Log {
@@ -43,6 +43,8 @@ export interface Skill {
   sourceName: string;
   skillName: string;
   targetName: string;
+  isCritical: boolean;
+  isDot: boolean;
   damage?: number;
 }
 

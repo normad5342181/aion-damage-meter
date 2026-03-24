@@ -53,7 +53,7 @@ async function readLine(file: File) {
   }
 }
 
-function filterLog(lines: string[], dateTimeRange?: [string, string]) {
+function filterLog(lines: string[], dateTimeRange?: [number, number]) {
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
     // 提取时间戳和后续内容, 不匹配的直接丢弃
@@ -102,7 +102,7 @@ function filterLog(lines: string[], dateTimeRange?: [string, string]) {
   };
 }
 
-async function readLog(file: File, dateTimeRange?: [string, string]) {
+async function readLog(file: File, dateTimeRange?: [number, number]) {
   // 先清空数据
   logList = [];
   tagList = [];

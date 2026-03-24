@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { Button, message, Upload, UploadFile, UploadProps } from "antd";
 import { AnalyzedResult } from "../../worker/read-log/types";
 const { Dragger } = Upload;
@@ -7,14 +7,17 @@ interface UploadLogProps {
   setPageLoading: (loading: boolean) => void;
   setCurrentPage: (page: string) => void;
   updateLogResult: (data: Partial<AnalyzedResult>) => void;
+  fileList: UploadFile[];
+  setFileList: (fileList: UploadFile[]) => void;
 }
 
 function UploadLog({
   setPageLoading,
   setCurrentPage,
   updateLogResult,
+  fileList,
+  setFileList,
 }: UploadLogProps) {
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
   // 数据处理进程
   const processRef = useRef<Worker>();
 
@@ -33,56 +36,6 @@ function UploadLog({
 
         const resData: AnalyzedResult = res.data.data;
         updateLogResult(resData);
-
-        // const damageObject: Record<string, DamageMeter> = {};
-        // for (let index = 0; index < resData.logList.length; index++) {
-        //   const log = resData.logList[index];
-        //   if (log.damageDetail) {
-        //     const damageDetail = log.damageDetail;
-        //     const source = damageDetail.sourceName;
-        //     // 已有的伤害来源
-        //     if (damageObject[source]) {
-        //       damageObject[source].damageSummary.count += damageDetail.damage;
-        //     } else {
-        //       damageObject[source] = {
-        //         damageSummary: {
-        //           count: damageDetail.damage,
-        //         },
-        //       };
-        //     }
-        //   }
-        // }
-
-        // const skillObject: Record<
-        //   string,
-        //   { name: string; times: number; damage: number }[]
-        // > = {};
-        // resData.skillMap.forEach((skill) => {
-        //   const playerSkills = skillObject[skill.sourceName];
-        //   if (playerSkills) {
-        //     const fs = playerSkills.find((x) => x.name === skill.skillName);
-        //     if (fs) {
-        //       fs.times += 1;
-        //       fs.damage += skill.damage || 0;
-        //     } else {
-        //       playerSkills.push({
-        //         name: skill.skillName,
-        //         times: 1,
-        //         damage: skill.damage || 0,
-        //       });
-        //     }
-        //   } else {
-        //     skillObject[skill.sourceName] = [
-        //       {
-        //         name: skill.skillName,
-        //         times: 1,
-        //         damage: skill.damage || 0,
-        //       },
-        //     ];
-        //   }
-        // });
-
-        // console.log("分技能统计:", skillObject);
       }
     };
 

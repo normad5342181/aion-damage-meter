@@ -1,21 +1,14 @@
-export const bosses = [
-  {
-    key: "黑暗普埃塔-师阿特马赫",
-    name: "大精灵师阿特马赫",
-    area: "黑暗普埃塔",
-  },
-  {
-    key: "黑暗普埃塔-塔哈巴塔",
-    name: "火焰支配者塔哈巴塔",
-    area: "黑暗普埃塔",
-  },
-];
+import { darkPuertaBosses } from "./instance/dark-puerta";
+
+export const bosses = [...darkPuertaBosses];
 
 export const PLAYER_SELF = "自己";
 
 export const NORMAL_ATTACK = "普通攻击";
 
 export const REFLECT_ATTACK = "反弹伤害";
+
+export const PROTECTION = "保护效果";
 
 export const UNKNOWN_DOT_SOURCE = "未知的DOT释放者";
 

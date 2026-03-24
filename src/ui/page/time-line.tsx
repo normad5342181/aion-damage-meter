@@ -1,4 +1,4 @@
-import { Button, DatePicker, Timeline, Tooltip } from "antd";
+import { Button, DatePicker, message, Timeline, Tooltip } from "antd";
 import { Tag } from "../../worker/read-log/types";
 import { useEffect, useRef, useState } from "react";
 import { TimelineItemType } from "antd/es/timeline/Timeline";
@@ -9,9 +9,10 @@ interface IProps {
   startTime: string;
   endTime: string;
   tagList: Tag[];
+  onSubmit: (startDt: number, endDt: number) => void;
 }
 
-function TimeLineView({ startTime, endTime, tagList }: IProps) {
+function TimeLineView({ startTime, endTime, tagList, onSubmit }: IProps) {
   const [dateTimeRange, setDateTimeRange] = useState<[number, number]>([
     new Date(startTime).getTime(),
     new Date(endTime).getTime(),
@@ -69,15 +70,15 @@ function TimeLineView({ startTime, endTime, tagList }: IProps) {
     let prevTime = startMs;
 
     tagList.forEach((tag) => {
-      const height = calcTimelineItemHeight(prevTime, tag.dateTime);
       const tagTime = new Date(tag.dateTime).getTime();
       if (tagTime >= startMs && tagTime <= endMs) {
+        const height = calcTimelineItemHeight(prevTime, tag.dateTime);
         marks.push({
           ...markRender(tag.dateTime, tag.label),
           style: { height, alignContent: "end" },
         });
+        prevTime = tagTime;
       }
-      prevTime = tagTime;
     });
 
     marks.push(markRender(endMs, "结束"));
@@ -96,8 +97,20 @@ function TimeLineView({ startTime, endTime, tagList }: IProps) {
   return (
     <div className="log-result-select-date">
       <div className="log-result-date-tool">
-        <Button type="text" onClick={() => updateSlider(startTime, endTime)}>
-          重置
+        <Button type="dashed" onClick={() => updateSlider(startTime, endTime)}>
+          重置时间
+        </Button>
+        <Button
+          type="primary"
+          onClick={() => {
+            if (endTimeRef.current < startTimeRef.current) {
+              message.error("开始时间不能大于结束时间");
+            } else {
+              onSubmit(startTimeRef.current, endTimeRef.current);
+            }
+          }}
+        >
+          开始计算
         </Button>
       </div>
       <span>

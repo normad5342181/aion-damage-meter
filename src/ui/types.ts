@@ -1,9 +1,5 @@
 export interface DamageMeter {
-  damageSummary: {
-    count: number;
-    dps?: number;
-    criticalRate?: number;
-  };
+  damageSummary: DamageSummary;
   skillSummary?: {
     name: string;
     damage: string;
@@ -15,4 +11,10 @@ export interface DamageMeter {
     damage: string;
     percent: number;
   };
+}
+
+export interface DamageSummary {
+  damageCount: number;
+  dps?: number;
+  criticalRate?: number;
 }

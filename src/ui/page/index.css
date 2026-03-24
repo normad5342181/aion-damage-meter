@@ -12,12 +12,18 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-
   justify-content: space-between;
+  padding: 10px 0;
+}
+
+.log-result-date-tool {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
 }
 
 .log-result-select-date .log-result-select-date-range {
-  height: calc(100% - 80px);
+  height: calc(100% - 140px);
   overflow-y: auto;
   overflow-x: hidden;
 }

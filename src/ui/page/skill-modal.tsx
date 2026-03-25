@@ -9,6 +9,7 @@ interface SkillData {
   damageCount: number;
   usedTimes: number;
   criticalTimes: number;
+  detail: Skill[];
 }
 export interface SkillModalProps {
   sourceName: string;
@@ -16,6 +17,7 @@ export interface SkillModalProps {
   handleOk: () => void;
   handleCancel: () => void;
   skillMap: Map<string, Skill>;
+  filteredTargets: string[];
 }
 
 function SkillModal({
@@ -24,13 +26,24 @@ function SkillModal({
   handleOk,
   handleCancel,
   skillMap,
+  filteredTargets,
 }: SkillModalProps) {
   const [dataSource, setDataSource] = useState<SkillData[]>([]);
 
   useEffect(() => {
     const resArr: SkillData[] = [];
+
+    const matchTarget = (skill: Skill) => {
+      if (filteredTargets?.length > 0) {
+        const targetList = skill.targetName.split(",").map((x) => x.trim());
+        return filteredTargets.some((x) => targetList.includes(x));
+      } else {
+        return true;
+      }
+    };
+
     skillMap.forEach((skill) => {
-      if (skill.sourceName === sourceName) {
+      if (skill.sourceName === sourceName && matchTarget(skill)) {
         const foundSkill = resArr.find((x) => x.skillName === skill.skillName);
         //有效技能
         const isEffectiveSkill = !skill.isDot;
@@ -39,6 +52,7 @@ function SkillModal({
           foundSkill.usedTimes += isEffectiveSkill ? 1 : 0;
           foundSkill.criticalTimes += skill.isCritical ? 1 : 0;
           foundSkill.damageCount += skill.damage || 0;
+          foundSkill.detail.push(skill);
         } else {
           resArr.push({
             key: skill.skillName,
@@ -46,13 +60,14 @@ function SkillModal({
             damageCount: skill.damage || 0,
             usedTimes: isEffectiveSkill ? 1 : 0,
             criticalTimes: skill.isCritical ? 1 : 0,
+            detail: [skill],
           });
         }
       }
     });
 
     setDataSource(resArr.sort((a, b) => b.damageCount - a.damageCount));
-  }, [sourceName, skillMap]);
+  }, [sourceName, skillMap, filteredTargets]);
 
   const columns: TableProps<SkillData>["columns"] = [
     {
@@ -80,6 +95,41 @@ function SkillModal({
     {
       title: "操作",
       key: "action",
+      render: (_, record) => (
+        <a
+          onClick={() =>
+            Modal.info({
+              title: record.skillName,
+              footer: null,
+              closable: true,
+              width: 600,
+              content: (
+                <Table
+                  size="small"
+                  columns={[
+                    { title: "时间", dataIndex: "dateTime" },
+                    { title: "目标", dataIndex: "targetName" },
+                    { title: "伤害量", dataIndex: "damage" },
+                    {
+                      title: "暴击",
+                      dataIndex: "isCritical",
+                      render: (x) => (x ? "是" : "否"),
+                    },
+                    // {
+                    //   title: "持续伤害",
+                    //   dataIndex: "isDot",
+                    //   render: (x) => (x ? "是" : "否"),
+                    // },
+                  ]}
+                  dataSource={record.detail}
+                />
+              ),
+            })
+          }
+        >
+          详情列表
+        </a>
+      ),
     },
   ];
 

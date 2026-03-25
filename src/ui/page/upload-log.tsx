@@ -96,14 +96,15 @@ function UploadLog({
   };
 
   return (
-    <div>
+    <div style={{ height: "calc(100% - 120px)", width: "100%" }}>
       <Dragger {...props}>
         <p
           style={{
             display: "flex",
-            height: 300,
-            width: 500,
+            height: "100%",
+            width: "100%",
             justifyContent: "center",
+            alignItems: "center",
           }}
           className="ant-upload-text"
         >

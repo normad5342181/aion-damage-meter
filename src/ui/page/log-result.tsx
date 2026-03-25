@@ -46,37 +46,6 @@ function LogResult({
           skillMap: resData.skillMap,
           damageSourceMap: resData.damageSourceMap,
         });
-
-        // const skillObject: Record<
-        //   string,
-        //   { name: string; times: number; damage: number }[]
-        // > = {};
-        // resData.skillMap.forEach((skill) => {
-        //   const playerSkills = skillObject[skill.sourceName];
-        //   if (playerSkills) {
-        //     const fs = playerSkills.find((x) => x.name === skill.skillName);
-        //     if (fs) {
-        //       fs.times += 1;
-        //       fs.damage += skill.damage || 0;
-        //     } else {
-        //       playerSkills.push({
-        //         name: skill.skillName,
-        //         times: 1,
-        //         damage: skill.damage || 0,
-        //       });
-        //     }
-        //   } else {
-        //     skillObject[skill.sourceName] = [
-        //       {
-        //         name: skill.skillName,
-        //         times: 1,
-        //         damage: skill.damage || 0,
-        //       },
-        //     ];
-        //   }
-        // });
-
-        // console.log("分技能统计:", skillObject);
       }
     };
 

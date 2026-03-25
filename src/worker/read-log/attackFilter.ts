@@ -1,8 +1,4 @@
-import {
-  NORMAL_ATTACK,
-  PLAYER_SELF,
-  REFLECT_ATTACK,
-} from "./constant";
+import { NORMAL_ATTACK, PLAYER_SELF, REFLECT_ATTACK } from "./constant";
 import { DamageSource, DotSkill, Log, Skill } from "./types";
 
 // 技能伤害的正则
@@ -195,7 +191,11 @@ function updateSkill(
   }
   // 更新伤害目标
   if (foundskill && targetName) {
-    foundskill.targetName = foundskill.targetName + targetName + ", ";
+    const targetList = foundskill.targetName.split(",");
+    if (!targetList.includes(targetName)) {
+      targetList.push(targetName);
+    }
+    foundskill.targetName = targetList.join(",");
   }
 }
 
@@ -285,7 +285,7 @@ export function attackFilter({
         {
           dateTime: logTime,
           skillName: NORMAL_ATTACK,
-          sourceName: PLAYER_SELF,
+          sourceName: match.groups.userName || PLAYER_SELF,
           targetName: match.groups.targetName,
           damage: Number(match.groups.damage.replace(/,/g, "")),
           isCritical: true,
@@ -569,9 +569,7 @@ export function attackFilter({
      * 保护效果
      * eg: 因Divus丨麦冬的保护效果，代替地之精灵吸收了龙族中级战斗队长造成的1,079伤害。
      */
-
     // 先不做处理吧，伤害被吸收了
-
     // const match = logContent.match(protectRegex);
     // if (match?.groups) {
     //   recordAllSkill(

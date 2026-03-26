@@ -14,6 +14,7 @@ import { bosses, NORMAL_ATTACK } from "../../worker/read-log/constant";
 import SkillModal, { SkillModalProps } from "./skill-modal";
 import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
+import { FilterValue } from "antd/es/table/interface";
 
 interface DataType {
   key: string;
@@ -43,12 +44,16 @@ function DamageMeter({ logList, skillMap }: IProps) {
   >({
     open: false,
     sourceName: "",
+    filteredTargets: [],
   });
 
   //伤害来源的搜索词
   const [sourceSearchText, setSourceSearchText] = useState<string>("");
   // 已经筛选的列
   const [filteredColumns, seFilteredColumns] = useState<(keyof DataType)[]>([]);
+  // 1.定义全局状态，用来存放各列的 filteredValue 状态
+  const [filteredValues, setFilteredValues] =
+    useState<Record<string, FilterValue | null>>();
 
   const hasInitalized = useRef(false);
   // const allSources = useRef<string[]>([]);
@@ -57,7 +62,22 @@ function DamageMeter({ logList, skillMap }: IProps) {
   // 数据筛选
 
   useEffect(() => {
-    if (!hasInitalized.current && logList.length > 0) {
+    // 日志列表更新，重置整个页面
+    hasInitalized.current = false;
+    setDataSource([]);
+    setTargetList([]);
+    setSkillModalProps({
+      open: false,
+      sourceName: "",
+      filteredTargets: [],
+    });
+    setSourceSearchText("");
+    seFilteredColumns([]);
+    allTargets.current = [];
+    for (const c in filteredValues) filteredValues[c] = [];
+    setFilteredValues({ ...filteredValues });
+
+    if (logList.length > 0) {
       conditionalAnalyze();
       hasInitalized.current = true;
     }
@@ -69,6 +89,12 @@ function DamageMeter({ logList, skillMap }: IProps) {
   }, [logList]);
 
   const columns: TableProps<DataType>["columns"] = [
+    {
+      title: "序号",
+      dataIndex: "index",
+      rowScope: "row",
+      render: (_, __, index) => index,
+    },
     {
       title: "伤害源",
       dataIndex: "damageSource",
@@ -95,7 +121,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
               seFilteredColumns(
                 filteredColumns.includes("damageSource")
                   ? [...filteredColumns]
-                  : [...filteredColumns, "damageSource"]
+                  : [...filteredColumns, "damageSource"],
               );
             }}
             style={{ marginBottom: 8, display: "block" }}
@@ -109,7 +135,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
                 seFilteredColumns(
                   filteredColumns.includes("damageSource")
                     ? [...filteredColumns]
-                    : [...filteredColumns, "damageSource"]
+                    : [...filteredColumns, "damageSource"],
                 );
               }}
               icon={<SearchOutlined />}
@@ -123,7 +149,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
                 clearFilters?.();
                 setSourceSearchText("");
                 seFilteredColumns(
-                  filteredColumns.filter((c) => c !== "damageSource")
+                  filteredColumns.filter((c) => c !== "damageSource"),
                 );
                 confirm();
               }}
@@ -148,6 +174,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
           }
         },
       },
+      filteredValue: filteredValues?.damageSource,
       render: (text) =>
         filteredColumns.includes("damageSource") ? (
           <Highlighter
@@ -187,7 +214,11 @@ function DamageMeter({ logList, skillMap }: IProps) {
       render: (_, record) => (
         <a
           onClick={() =>
-            setSkillModalProps({ open: true, sourceName: record.damageSource })
+            setSkillModalProps({
+              open: true,
+              sourceName: record.damageSource,
+              filteredTargets: targetList,
+            })
           }
         >
           技能明细
@@ -275,6 +306,9 @@ function DamageMeter({ logList, skillMap }: IProps) {
       <Table<DataType>
         columns={columns}
         dataSource={dataSource}
+        onChange={(_, filters) => {
+          setFilteredValues(filters);
+        }}
         title={() => (
           <Space>
             {/* <Select
@@ -313,7 +347,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
                       onClick={() => {
                         const bossList = bosses.map((boss) => boss.name);
                         const namedBoss = bossList.filter((boss) =>
-                          allTargets.current.includes(boss)
+                          allTargets.current.includes(boss),
                         );
                         setTargetList(namedBoss);
                       }}
@@ -329,7 +363,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
               type="primary"
               onClick={() =>
                 conditionalAnalyze(
-                  targetList.length > 0 ? targetList : undefined
+                  targetList.length > 0 ? targetList : undefined,
                 )
               }
             >
@@ -343,9 +377,20 @@ function DamageMeter({ logList, skillMap }: IProps) {
         skillMap={skillMap}
         sourceName=""
         open={false}
-        filteredTargets={targetList}
-        handleOk={() => setSkillModalProps({ open: false, sourceName: "" })}
-        handleCancel={() => setSkillModalProps({ open: false, sourceName: "" })}
+        handleOk={() =>
+          setSkillModalProps({
+            open: false,
+            sourceName: "",
+            filteredTargets: [],
+          })
+        }
+        handleCancel={() =>
+          setSkillModalProps({
+            open: false,
+            sourceName: "",
+            filteredTargets: [],
+          })
+        }
         {...skillModalProps}
       ></SkillModal>
     </>

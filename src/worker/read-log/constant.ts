@@ -2,7 +2,7 @@ import { darkPuertaBosses } from "./instance/dark-puerta";
 
 export const bosses = [...darkPuertaBosses];
 
-export const PLAYER_SELF = "自己";
+export const PLAYER_SELF = "__我自己__";
 
 export const NORMAL_ATTACK = "普通攻击";
 

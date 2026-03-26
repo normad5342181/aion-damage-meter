@@ -80,7 +80,7 @@ function recordDotSkill(
   dateTime: string,
   targetName: string,
   skillName: string,
-  sourceName?: string
+  sourceName?: string,
 ) {
   const key = buildDotSkillKey({ targetName, skillName });
   // 从记录的信息中查找施加记录
@@ -95,7 +95,7 @@ function recordDotSkill(
 // 记录玩家
 function recordDamageSource(
   { name, skillName }: { name: string; skillName: string },
-  damageSourceMap: Map<string, DamageSource>
+  damageSourceMap: Map<string, DamageSource>,
 ) {
   const source = damageSourceMap.get(name);
   if (source) {
@@ -128,11 +128,11 @@ function recordAllSkill(
     damage?: number;
   },
   damageSourceMap: Map<string, DamageSource>,
-  skillMap: Map<string, Skill>
+  skillMap: Map<string, Skill>,
 ) {
   recordDamageSource(
     { name: sourceName || PLAYER_SELF, skillName },
-    damageSourceMap
+    damageSourceMap,
   );
 
   const skillKey = buildSkillKey({
@@ -146,17 +146,21 @@ function recordAllSkill(
   if (skill) {
     updateSkill(
       { dateTime, skillName, sourceName, targetName, damage },
-      skillMap
+      skillMap,
     );
   } else {
     skillMap.set(skillKey, {
       dateTime,
       sourceName: sourceName || PLAYER_SELF,
       skillName,
-      targetName: targetName || "",
-      isCritical: isCritical ?? false,
       isDot: isDot ?? false,
-      damage: damage ?? 0,
+      targetObjects: [
+        {
+          targetName: targetName || "",
+          isCritical: isCritical ?? false,
+          damage: damage ?? 0,
+        },
+      ],
     });
   }
 }
@@ -176,7 +180,7 @@ function updateSkill(
     targetName?: string;
     damage?: number;
   },
-  skillMap: Map<string, Skill>
+  skillMap: Map<string, Skill>,
 ) {
   const skillKey = buildSkillKey({
     sourceName: sourceName || PLAYER_SELF,
@@ -185,17 +189,27 @@ function updateSkill(
   });
 
   const foundskill = skillMap.get(skillKey);
-  // 更新伤害
-  if (foundskill && damage) {
-    foundskill.damage = (foundskill.damage || 0) + damage;
-  }
-  // 更新伤害目标
-  if (foundskill && targetName) {
-    const targetList = foundskill.targetName.split(",");
-    if (!targetList.includes(targetName)) {
-      targetList.push(targetName);
+
+  if (foundskill) {
+    const targetObj = foundskill.targetObjects?.find(
+      (t) => t.targetName === targetName,
+    );
+
+    // 已有伤害目标
+    if (targetObj) {
+      // 更新伤害
+      if (damage) {
+        targetObj.damage = (targetObj.damage || 0) + damage;
+      }
+    } else {
+      // 更新伤害目标
+      if (targetName) {
+        foundskill.targetObjects = [
+          ...foundskill.targetObjects,
+          { targetName, damage: damage || 0, isCritical: false },
+        ];
+      }
     }
-    foundskill.targetName = targetList.join(",");
   }
 }
 
@@ -221,6 +235,7 @@ export function attackFilter({
      * 自身暴击eg: 致命一击！使用身体重击 III技能，对大精灵师阿特马赫造成了2,181的伤害。
      * 其他人暴击eg: 致命一击！嗷嗷小脑虎使用弱化之猛击 V技能，对大精灵师阿特马赫造成了1,408的伤害。
      */
+
     const match = logContent.match(skillRegex);
     if (match?.groups) {
       logList.push({
@@ -249,7 +264,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
 
       // 有些dot在本人日志和队友日志中表现不一，这里做一个所有技能的记录算了，狗屎盛趣
@@ -257,7 +272,7 @@ export function attackFilter({
         logTime,
         match.groups.targetName,
         match.groups.skillName,
-        match.groups.userName || PLAYER_SELF
+        match.groups.userName || PLAYER_SELF,
       );
     }
   } else if (logContent.match(criticalAttackRegex)) {
@@ -292,7 +307,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (
@@ -336,7 +351,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (
@@ -377,7 +392,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (
@@ -396,7 +411,7 @@ export function attackFilter({
         logTime,
         match.groups.targetName,
         match.groups.skillName,
-        match.groups.userName || PLAYER_SELF
+        match.groups.userName || PLAYER_SELF,
       );
 
       recordAllSkill(
@@ -410,7 +425,7 @@ export function attackFilter({
           isDot: true,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (logContent.match(dotDamageRegex)) {
@@ -425,7 +440,7 @@ export function attackFilter({
         buildDotSkillKey({
           targetName: match.groups.targetName,
           skillName: match.groups.skillName,
-        })
+        }),
       );
 
       logList.push({
@@ -450,9 +465,10 @@ export function attackFilter({
             dateTime: foundSkill.dateTime,
             skillName: foundSkill.skillName,
             sourceName: foundSkill.sourceName || PLAYER_SELF,
+            targetName: match.groups.targetName,
             damage: Number(match.groups.damage.replace(/,/g, "")),
           },
-          skillMap
+          skillMap,
         );
       }
     }
@@ -468,7 +484,7 @@ export function attackFilter({
         logTime,
         match.groups.targetName,
         match.groups.skillName,
-        match.groups.userName || PLAYER_SELF
+        match.groups.userName || PLAYER_SELF,
       );
 
       // 计算伤害
@@ -497,7 +513,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (logContent.match(delaySkillRegex)) {
@@ -512,7 +528,7 @@ export function attackFilter({
         logTime,
         match.groups.targetName,
         match.groups.skillName,
-        match.groups.userName || PLAYER_SELF
+        match.groups.userName || PLAYER_SELF,
       );
 
       recordAllSkill(
@@ -526,7 +542,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else if (logContent.match(takeDotRegex)) {
@@ -547,7 +563,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
 
       logList.push({
@@ -604,7 +620,7 @@ export function attackFilter({
           isDot: false,
         },
         damageSourceMap,
-        skillMap
+        skillMap,
       );
     }
   } else {

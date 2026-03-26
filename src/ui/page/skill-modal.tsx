@@ -17,7 +17,7 @@ export interface SkillModalProps {
   handleOk: () => void;
   handleCancel: () => void;
   skillMap: Map<string, Skill>;
-  filteredTargets: string[];
+  filteredTargets?: string[];
 }
 
 function SkillModal({
@@ -26,7 +26,7 @@ function SkillModal({
   handleOk,
   handleCancel,
   skillMap,
-  filteredTargets,
+  filteredTargets = [],
 }: SkillModalProps) {
   const [dataSource, setDataSource] = useState<SkillData[]>([]);
 
@@ -35,31 +35,59 @@ function SkillModal({
 
     const matchTarget = (skill: Skill) => {
       if (filteredTargets?.length > 0) {
-        const targetList = skill.targetName.split(",").map((x) => x.trim());
-        return filteredTargets.some((x) => targetList.includes(x));
+        const objs = skill?.targetObjects?.filter((to) => {
+          return filteredTargets.some((x) => x === to.targetName);
+        });
+        const criticalTimes = objs.filter((o) => o.isCritical).length;
+        return objs?.length > 0
+          ? {
+              criticalTimes: criticalTimes / (skill.targetObjects.length || 1),
+              damage: objs.reduce(
+                (count, current) => count + (current?.damage || 0),
+                0,
+              ),
+            }
+          : false;
       } else {
         return true;
       }
     };
 
     skillMap.forEach((skill) => {
-      if (skill.sourceName === sourceName && matchTarget(skill)) {
+      const targetRes = matchTarget(skill);
+      if (skill.sourceName === sourceName && Boolean(targetRes)) {
         const foundSkill = resArr.find((x) => x.skillName === skill.skillName);
         //有效技能
         const isEffectiveSkill = !skill.isDot;
 
+        let criticalTimes = 0;
+        let damage = 0;
+        if (typeof targetRes == "boolean") {
+          const thisCriticalTimes = skill.targetObjects.filter(
+            (o) => o.isCritical,
+          ).length;
+          criticalTimes = thisCriticalTimes / (skill.targetObjects.length || 1);
+          damage = skill.targetObjects.reduce(
+            (count, current) => count + (current?.damage || 0),
+            0,
+          );
+        } else {
+          criticalTimes = targetRes.criticalTimes;
+          damage = targetRes.damage;
+        }
+
         if (foundSkill) {
           foundSkill.usedTimes += isEffectiveSkill ? 1 : 0;
-          foundSkill.criticalTimes += skill.isCritical ? 1 : 0;
-          foundSkill.damageCount += skill.damage || 0;
+          foundSkill.criticalTimes += criticalTimes;
+          foundSkill.damageCount += damage;
           foundSkill.detail.push(skill);
         } else {
           resArr.push({
             key: skill.skillName,
             skillName: skill.skillName,
-            damageCount: skill.damage || 0,
+            damageCount: damage,
             usedTimes: isEffectiveSkill ? 1 : 0,
-            criticalTimes: skill.isCritical ? 1 : 0,
+            criticalTimes: criticalTimes,
             detail: [skill],
           });
         }
@@ -97,7 +125,18 @@ function SkillModal({
       key: "action",
       render: (_, record) => (
         <a
-          onClick={() =>
+          onClick={() => {
+            const dataList = record.detail.reduce(
+              (resArr: Skill["targetObjects"][], cur) => {
+                return resArr.concat(
+                  cur.targetObjects.map((t) => {
+                    return { ...t, dateTime: cur.dateTime };
+                  }),
+                );
+              },
+              [],
+            );
+
             Modal.info({
               title: record.skillName,
               footer: null,
@@ -106,6 +145,7 @@ function SkillModal({
               content: (
                 <Table
                   size="small"
+                  key="dateTime"
                   columns={[
                     { title: "时间", dataIndex: "dateTime" },
                     { title: "目标", dataIndex: "targetName" },
@@ -115,17 +155,12 @@ function SkillModal({
                       dataIndex: "isCritical",
                       render: (x) => (x ? "是" : "否"),
                     },
-                    // {
-                    //   title: "持续伤害",
-                    //   dataIndex: "isDot",
-                    //   render: (x) => (x ? "是" : "否"),
-                    // },
                   ]}
-                  dataSource={record.detail}
+                  dataSource={dataList}
                 />
               ),
-            })
-          }
+            });
+          }}
         >
           详情列表
         </a>

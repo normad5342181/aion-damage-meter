@@ -42,10 +42,12 @@ export interface Skill {
   dateTime: string;
   sourceName: string;
   skillName: string;
-  targetName: string;
-  isCritical: boolean;
   isDot: boolean;
-  damage?: number;
+  targetObjects: {
+    targetName: string;
+    isCritical: boolean;
+    damage?: number;
+  }[];
 }
 
 export interface DamageSource {

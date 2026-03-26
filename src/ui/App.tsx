@@ -37,7 +37,7 @@ function App() {
         damageSourceMap: damageSourceMap || logResult.damageSourceMap,
       });
     },
-    [logResult, setLogResult]
+    [logResult, setLogResult],
   );
 
   return (

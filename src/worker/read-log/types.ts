@@ -65,3 +65,13 @@ export interface AnalyzedResult {
   skillMap: Map<string, Skill>;
   damageSourceMap: Map<string, DamageSource>;
 }
+
+// 技能库
+export interface LibSkill {
+  id?: number;
+  name: string;
+  level?: number;
+  type?: string;
+  role?: string[];
+  race?: string;
+}

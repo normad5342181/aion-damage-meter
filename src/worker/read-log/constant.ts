@@ -17,14 +17,17 @@ export enum Role {
   Templar = "守护星",
   Gladiator = "剑星",
   Scout = "侦察者",
-  Ranger = "弓星",
   Assassin = "杀星",
+  Ranger = "弓星",
   Priest = "牧师",
   Cleric = "治愈星",
   Chanter = "护法星",
   Mage = "法师",
   Sorcerer = "魔道星",
   Spiritmaster = "精灵星",
+  Minion = "召唤物",
+  Skill = "技能",
+  Godstone = "神石",
   Other = "其他",
 }
 

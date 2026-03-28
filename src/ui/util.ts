@@ -163,7 +163,7 @@ export function calcArrayIntersection<T extends string>(
   };
 }
 
-export function matchSpecialRole(sourceName: string) {
+export function matchSpecialRole(sourceName: string): Role {
   if (
     sourceName.endsWith("精灵") ||
     sourceName.endsWith("气息") ||

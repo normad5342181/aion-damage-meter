@@ -7,24 +7,29 @@ import {
   Space,
   Table,
   TableProps,
+  Tag,
 } from "antd";
 import { DamageSource, Log, Skill } from "../../worker/read-log/types";
 import { useEffect, useRef, useState } from "react";
-import { bosses, NORMAL_ATTACK } from "../../worker/read-log/constant";
+import { bosses, NORMAL_ATTACK, Role } from "../../worker/read-log/constant";
 import SkillModal, { SkillModalProps } from "./skill-modal";
 import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import { FilterValue } from "antd/es/table/interface";
-import { getRoleFilters, matchSpecialRole } from "../util";
+import { getRoleFilters, matchSpecialRole, removeTrailingRoman } from "../util";
+import { signedMinions } from "../../worker/read-log/roles/minion";
+import { allSkillLib } from "../../worker/read-log/roles";
 
 interface DataType {
   key: string;
   damageSource: string;
-  role?: string;
+  role?: Role;
   race?: string;
   damageCount: number;
   dps: number;
   criticalRate: number;
+  childrenPer?: number;
+  children?: DataType[];
 }
 
 interface IProps {
@@ -185,6 +190,29 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         ),
     },
     {
+      title: "聚合伤害源",
+      dataIndex: "childrenPer",
+      render: (_, row) => {
+        console.log("row", row);
+        if (row?.children && row?.children?.length > 0) {
+          return (
+            <>
+              {row.children.forEach((e) => (
+                <Tag key={e.damageSource} variant="filled">
+                  {(row?.childrenPer || 0) >= 0.99999999
+                    ? ""
+                    : `${((row?.childrenPer || 0) * 100).toFixed(1)}%`}{" "}
+                  {e.damageSource}
+                </Tag>
+              ))}
+            </>
+          );
+        } else {
+          return null;
+        }
+      },
+    },
+    {
       title: "职业",
       dataIndex: "role",
       filters: getRoleFilters(),
@@ -194,14 +222,20 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         return record.role === value;
       },
     },
-
-    // {
-    //   title: "种族",
-    //   dataIndex: "race",
-    // },
     {
       title: "总伤害",
       dataIndex: "damageCount",
+      render: (_, row) => {
+        if (row?.children && row?.children?.length > 0) {
+          const childrenCount = row?.children?.reduce(
+            (count, cur) => count + cur.damageCount,
+            0,
+          );
+          return row.damageCount + (row.childrenPer || 0) * childrenCount;
+        } else {
+          return row.damageCount;
+        }
+      },
     },
     {
       title: "DPS",
@@ -306,6 +340,142 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
     setDataSource(sourceList);
   };
 
+  const combineData = () => {
+    const roleMap = new Map<
+      Role,
+      {
+        masters: DataType[];
+        minions: DataType[];
+      }
+    >();
+
+    const setMapValue = (
+      key: Role,
+      val: DataType,
+      type: "master" | "minion",
+    ) => {
+      const oldValue = roleMap.get(key);
+      if (type === "master") {
+        if (oldValue) {
+          roleMap.set(key, {
+            ...oldValue,
+            masters: [...oldValue.masters, val],
+          });
+        } else {
+          roleMap.set(key, {
+            minions: [],
+            masters: [val],
+          });
+        }
+      } else {
+        if (oldValue) {
+          roleMap.set(key, {
+            ...oldValue,
+            minions: [...oldValue.minions, val],
+          });
+        } else {
+          roleMap.set(key, {
+            minions: [val],
+            masters: [],
+          });
+        }
+      }
+    };
+
+    dataSource.forEach((row) => {
+      const sourceName = removeTrailingRoman(row.damageSource);
+      const rowRole = row.role;
+      if (
+        rowRole &&
+        [
+          Role.Templar,
+          Role.Gladiator,
+          Role.Assassin,
+          Role.Ranger,
+          Role.Cleric,
+          Role.Sorcerer,
+          Role.Spiritmaster,
+          Role.Chanter,
+        ].includes(rowRole)
+      ) {
+        setMapValue(rowRole, row, "master");
+      }
+
+      // 先找召唤物
+      const foundMinion = signedMinions.find(
+        (minion) => minion.name === sourceName,
+      );
+      if (foundMinion) {
+        if (Array.isArray(foundMinion.belong)) {
+          foundMinion.belong.forEach((belong) => {
+            setMapValue(belong, row, "minion");
+          });
+        } else {
+          setMapValue(foundMinion.belong, row, "minion");
+        }
+      }
+
+      // 再找技能
+      const roles = Object.keys(allSkillLib);
+      for (let index = 0; index < roles.length; index++) {
+        const currentRole = roles[index];
+        const roleSkills = (allSkillLib as Record<string, string[]>)[
+          currentRole
+        ];
+        if (currentRole !== "universal") {
+          if (roleSkills.includes(sourceName)) {
+            setMapValue(Role[currentRole as keyof typeof Role], row, "minion");
+          }
+        }
+      }
+    });
+
+    const newDataSource: DataType[] = [];
+
+    let allMinionStrs: string[] = [];
+
+    for (const value of roleMap.values()) {
+      allMinionStrs = allMinionStrs.concat(
+        value.minions.map((x) => x.damageSource),
+      );
+    }
+
+    dataSource.forEach((row) => {
+      const rowRole = row.role;
+      const damageSource = row.damageSource;
+      if (rowRole) {
+        const about = roleMap.get(rowRole);
+        if (
+          about?.masters?.map((x) => x.damageSource)?.includes(damageSource) &&
+          about?.minions?.length > 0
+        ) {
+          const masterAllDamage = about?.masters.reduce(
+            (count, cur) => count + cur.damageCount,
+            0,
+          );
+
+          const percent = row.damageCount / masterAllDamage;
+          const perMinions = about?.minions?.map((x) => ({
+            ...x,
+            key: `${damageSource}-${x.damageSource}`,
+            damageCount: x.damageCount * percent,
+            dps: x.dps * percent,
+          }));
+
+          newDataSource.push({
+            ...row,
+            children: perMinions,
+            childrenPer: percent,
+          });
+        } else if (!allMinionStrs?.includes(damageSource)) {
+          newDataSource.push(row);
+        }
+      }
+    });
+
+    setDataSource(newDataSource);
+  };
+
   return (
     <>
       <Table<DataType>
@@ -378,7 +548,13 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
             </Space>
 
             <Space>
-              <Button type="primary">聚合数据</Button>
+              <Button
+                type="primary"
+                disabled={dataSource.length === 0}
+                onClick={combineData}
+              >
+                聚合数据
+              </Button>
             </Space>
           </div>
         )}

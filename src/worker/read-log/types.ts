@@ -75,3 +75,8 @@ export interface AnalyzedResult {
 //   role?: string[];
 //   race?: string;
 // }
+
+export interface Minion {
+  name: string;
+  belong: Role | Role[];
+}

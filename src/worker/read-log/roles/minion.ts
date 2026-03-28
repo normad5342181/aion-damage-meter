@@ -1,6 +1,7 @@
 import { Role } from "../constant";
+import { Minion } from "../types";
 
-export const signedMinions = [
+export const signedMinions: Minion[] = [
   {
     name: "火之气息",
     belong: Role.Spiritmaster,
@@ -59,38 +60,38 @@ export const signedMinions = [
     name: "风之约定",
     belong: [Role.Chanter, Role.Cleric],
   },
-  {
-    name: "风之祝福",
-    belong: Role.Chanter,
-  },
+  // {
+  //   name: "风之祝福",
+  //   belong: Role.Chanter,
+  // },
 
-  {
-    name: "钝化陷阱",
-    belong: Role.Chanter,
-  },
-  {
-    name: "剧毒陷阱",
-    belong: Role.Chanter,
-  },
-  {
-    name: "爆炸陷阱",
-    belong: Role.Chanter,
-  },
-  {
-    name: "破灭之陷阱",
-    belong: Role.Chanter,
-  },
-  {
-    name: "泥土陷阱",
-    belong: Role.Chanter,
-  },
+  // {
+  //   name: "钝化陷阱",
+  //   belong: Role.Chanter,
+  // },
+  // {
+  //   name: "剧毒陷阱",
+  //   belong: Role.Chanter,
+  // },
+  // {
+  //   name: "爆炸陷阱",
+  //   belong: Role.Chanter,
+  // },
+  // {
+  //   name: "破灭之陷阱",
+  //   belong: Role.Chanter,
+  // },
+  // {
+  //   name: "泥土陷阱",
+  //   belong: Role.Chanter,
+  // },
 
-  {
-    name: "召唤台风",
-    belong: Role.Sorcerer,
-  },
-  {
-    name: "冰柱",
-    belong: Role.Sorcerer,
-  },
+  // {
+  //   name: "召唤台风",
+  //   belong: Role.Sorcerer,
+  // },
+  // {
+  //   name: "冰柱",
+  //   belong: Role.Sorcerer,
+  // },
 ];

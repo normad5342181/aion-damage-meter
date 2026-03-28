@@ -58,7 +58,7 @@ export function calcTimelineItemHeight(
 const ROMAN_REGEX = / (I|II|III|IV|V|VI|VII|VIII|IX|X)$/;
 // 去除尾部罗马数字
 export const removeTrailingRoman = (str: string): string => {
-  return str.replace(ROMAN_REGEX, "").trim();
+  return str.trim().replace(ROMAN_REGEX, "").trim();
 };
 
 export function getRoleFilters() {

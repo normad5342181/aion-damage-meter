@@ -52,7 +52,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
   const [sourceSearchText, setSourceSearchText] = useState<string>("");
   // 已经筛选的列
   const [filteredColumns, seFilteredColumns] = useState<(keyof DataType)[]>([]);
-  // 1.定义全局状态，用来存放各列的 filteredValue 状态
+  // 用来存放各列的 filteredValue 状态
   const [filteredValues, setFilteredValues] = useState<
     Record<string, FilterValue | null>
   >({});

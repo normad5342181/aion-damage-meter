@@ -1,6 +1,6 @@
 import { calcArrayIntersection, removeTrailingRoman } from "../../ui/util";
 import { attackFilter } from "./attackFilter";
-import { Role } from "./constant";
+import { NORMAL_ATTACK, Role } from "./constant";
 import { allSkillLib } from "./roles";
 import { tagFilter } from "./tagFilter";
 import {
@@ -98,9 +98,13 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
 
   // 处理DamageSource的role和race
   damageSourceMap.forEach((source) => {
-    const usedSkills = source.usedSkills.map((s) => removeTrailingRoman(s));
+    const usedSkills = source.usedSkills
+      .filter((s) => s !== NORMAL_ATTACK)
+      .map((s) => removeTrailingRoman(s));
+
     const universalSkills = allSkillLib.universal;
     const roles = Object.keys(allSkillLib);
+
     for (let index = 0; index < roles.length; index++) {
       const currentRole = roles[index];
       const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
@@ -116,7 +120,7 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
           break;
         } else if (intersection.length >= 1) {
           const { intersection: inter, onlyInArr2: only2 } =
-            calcArrayIntersection(roleSkills, universalSkills);
+            calcArrayIntersection(universalSkills, usedSkills);
           if (inter.length >= 1) {
             source.role = Role[currentRole as keyof typeof Role];
             break;

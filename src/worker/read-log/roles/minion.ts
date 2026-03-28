@@ -45,10 +45,6 @@ export const signedMinions = [
     name: "熔岩精灵",
     belong: Role.Spiritmaster,
   },
-  {
-    name: "旋风精灵",
-    belong: Role.Spiritmaster,
-  },
 
   {
     name: "高洁气息",
@@ -59,10 +55,10 @@ export const signedMinions = [
     belong: Role.Cleric,
   },
 
-  // {
-  //   name: "风之约定",
-  //   belong: Role.Chanter,
-  // },
+  {
+    name: "风之约定",
+    belong: [Role.Chanter, Role.Cleric],
+  },
   {
     name: "风之祝福",
     belong: Role.Chanter,
@@ -82,6 +78,10 @@ export const signedMinions = [
   },
   {
     name: "破灭之陷阱",
+    belong: Role.Chanter,
+  },
+  {
+    name: "泥土陷阱",
     belong: Role.Chanter,
   },
 

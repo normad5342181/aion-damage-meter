@@ -52,7 +52,7 @@ export interface Skill {
 
 export interface DamageSource {
   name: string;
-  usedSkill: string[];
+  usedSkills: string[];
   role?: Role;
   race?: Race;
 }
@@ -66,12 +66,12 @@ export interface AnalyzedResult {
   damageSourceMap: Map<string, DamageSource>;
 }
 
-// 技能库
-export interface LibSkill {
-  id?: number;
-  name: string;
-  level?: number;
-  type?: string;
-  role?: string[];
-  race?: string;
-}
+// // 技能库
+// export interface LibSkill {
+//   id?: number;
+//   name: string;
+//   level?: number;
+//   type?: string;
+//   role?: string[];
+//   race?: string;
+// }

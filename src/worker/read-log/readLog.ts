@@ -1,4 +1,7 @@
+import { calcArrayIntersection, removeTrailingRoman } from "../../ui/util";
 import { attackFilter } from "./attackFilter";
+import { Role } from "./constant";
+import { allSkillLib } from "./roles";
 import { tagFilter } from "./tagFilter";
 import {
   AnalyzedResult,
@@ -92,6 +95,40 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
       }
     }
   }
+
+  // 处理DamageSource的role和race
+  damageSourceMap.forEach((source) => {
+    const usedSkills = source.usedSkills.map((s) => removeTrailingRoman(s));
+    const universalSkills = allSkillLib.universal;
+    const roles = Object.keys(allSkillLib);
+    for (let index = 0; index < roles.length; index++) {
+      const currentRole = roles[index];
+      const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
+      if (currentRole !== "universal") {
+        const { intersection, onlyInArr2 } = calcArrayIntersection(
+          roleSkills,
+          usedSkills,
+        );
+
+        if (intersection.length >= 3) {
+          // 用了三个以上的职业技能
+          source.role = Role[currentRole as keyof typeof Role];
+          break;
+        } else if (intersection.length >= 1) {
+          const { intersection: inter, onlyInArr2: only2 } =
+            calcArrayIntersection(roleSkills, universalSkills);
+          if (inter.length >= 1) {
+            source.role = Role[currentRole as keyof typeof Role];
+            break;
+          } else if (only2.length <= 1 || onlyInArr2.length <= 1) {
+            source.role = Role[currentRole as keyof typeof Role];
+            break;
+          }
+        }
+      }
+    }
+  });
+
   return {
     startTime,
     endTime,

@@ -99,12 +99,12 @@ function recordDamageSource(
 ) {
   const source = damageSourceMap.get(name);
   if (source) {
-    const recorded = source.usedSkill.find((item) => item === skillName);
+    const recorded = source.usedSkills.find((item) => item === skillName);
     if (!recorded) {
-      source.usedSkill.push(skillName);
+      source.usedSkills.push(skillName);
     }
   } else {
-    damageSourceMap.set(name, { name, usedSkill: [skillName] });
+    damageSourceMap.set(name, { name, usedSkills: [skillName] });
   }
 }
 

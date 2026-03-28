@@ -15,6 +15,7 @@ import SkillModal, { SkillModalProps } from "./skill-modal";
 import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import { FilterValue } from "antd/es/table/interface";
+import { getRoleFilters, matchSpecialRole } from "../util";
 
 interface DataType {
   key: string;
@@ -32,7 +33,7 @@ interface IProps {
   damageSourceMap: Map<string, DamageSource>;
 }
 
-function DamageMeter({ logList, skillMap }: IProps) {
+function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
   // 表格数据
   const [dataSource, setDataSource] = useState<DataType[]>([]);
   // const [sourceList, setSourceList] = useState<string[]>([]);
@@ -52,14 +53,14 @@ function DamageMeter({ logList, skillMap }: IProps) {
   // 已经筛选的列
   const [filteredColumns, seFilteredColumns] = useState<(keyof DataType)[]>([]);
   // 1.定义全局状态，用来存放各列的 filteredValue 状态
-  const [filteredValues, setFilteredValues] =
-    useState<Record<string, FilterValue | null>>();
+  const [filteredValues, setFilteredValues] = useState<
+    Record<string, FilterValue | null>
+  >({});
 
   const hasInitalized = useRef(false);
   // const allSources = useRef<string[]>([]);
   const allTargets = useRef<string[]>([]);
   const searchInput = useRef<InputRef>(null);
-  // 数据筛选
 
   useEffect(() => {
     // 日志列表更新，重置整个页面
@@ -74,7 +75,8 @@ function DamageMeter({ logList, skillMap }: IProps) {
     setSourceSearchText("");
     seFilteredColumns([]);
     allTargets.current = [];
-    for (const c in filteredValues) filteredValues[c] = [];
+    for (const c in filteredValues) filteredValues[c] = null;
+    // filteredValues.role = getDefaultRoleFilters();
     setFilteredValues({ ...filteredValues });
 
     if (logList.length > 0) {
@@ -101,12 +103,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
       filterIcon: (filtered: boolean) => (
         <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
       ),
-      filterDropdown: ({
-        setSelectedKeys,
-        selectedKeys,
-        confirm,
-        clearFilters,
-      }) => (
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm }) => (
         <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
           <Input
             ref={searchInput}
@@ -146,11 +143,11 @@ function DamageMeter({ logList, skillMap }: IProps) {
             </Button>
             <Button
               onClick={() => {
-                clearFilters?.();
                 setSourceSearchText("");
                 seFilteredColumns(
                   filteredColumns.filter((c) => c !== "damageSource"),
                 );
+                setFilteredValues({ ...filteredValues, damageSource: null });
                 confirm();
               }}
               size="small"
@@ -190,7 +187,14 @@ function DamageMeter({ logList, skillMap }: IProps) {
     {
       title: "职业",
       dataIndex: "role",
+      filters: getRoleFilters(),
+      filterMultiple: true,
+      filteredValue: filteredValues?.role,
+      onFilter: (value, record) => {
+        return record.role === value;
+      },
     },
+
     // {
     //   title: "种族",
     //   dataIndex: "race",
@@ -293,6 +297,7 @@ function DamageMeter({ logList, skillMap }: IProps) {
             100
           : 0,
         dps: 0,
+        role: damageSourceMap.get(key)?.role || matchSpecialRole(key),
       }))
       .sort((a, b) => b.damageCount - a.damageCount);
 
@@ -310,8 +315,9 @@ function DamageMeter({ logList, skillMap }: IProps) {
           setFilteredValues(filters);
         }}
         title={() => (
-          <Space>
-            {/* <Select
+          <div className="damage-meter-table-title">
+            <Space>
+              {/* <Select
           mode="multiple"
           style={{ width: 500 }}
           value={sourceList}
@@ -325,51 +331,56 @@ function DamageMeter({ logList, skillMap }: IProps) {
           onChange={(values) => setSourceList(values)}
         /> */}
 
-            <Select
-              mode="multiple"
-              style={{ width: 500 }}
-              allowClear
-              placeholder="筛选伤害目标"
-              maxTagCount="responsive"
-              value={targetList}
-              options={allTargets.current.map((item) => ({
-                label: item,
-                value: item,
-              }))}
-              onChange={(values) => setTargetList(values)}
-              popupRender={(menu) => (
-                <>
-                  {menu}
-                  <Divider style={{ margin: "8px 0" }} />
-                  <Space style={{ padding: "0 8px 4px" }}>
-                    <Button
-                      type="text"
-                      onClick={() => {
-                        const bossList = bosses.map((boss) => boss.name);
-                        const namedBoss = bossList.filter((boss) =>
-                          allTargets.current.includes(boss),
-                        );
-                        setTargetList(namedBoss);
-                      }}
-                    >
-                      选择所有命名怪
-                    </Button>
-                  </Space>
-                </>
-              )}
-            />
+              <Select
+                mode="multiple"
+                style={{ width: 500 }}
+                allowClear
+                placeholder="筛选伤害目标"
+                maxTagCount="responsive"
+                value={targetList}
+                options={allTargets.current.map((item) => ({
+                  label: item,
+                  value: item,
+                }))}
+                onChange={(values) => setTargetList(values)}
+                popupRender={(menu) => (
+                  <>
+                    {menu}
+                    <Divider style={{ margin: "8px 0" }} />
+                    <Space style={{ padding: "0 8px 4px" }}>
+                      <Button
+                        type="text"
+                        onClick={() => {
+                          const bossList = bosses.map((boss) => boss.name);
+                          const namedBoss = bossList.filter((boss) =>
+                            allTargets.current.includes(boss),
+                          );
+                          setTargetList(namedBoss);
+                        }}
+                      >
+                        选择所有命名怪
+                      </Button>
+                    </Space>
+                  </>
+                )}
+              />
 
-            <Button
-              type="primary"
-              onClick={() =>
-                conditionalAnalyze(
-                  targetList.length > 0 ? targetList : undefined,
-                )
-              }
-            >
-              确认
-            </Button>
-          </Space>
+              <Button
+                type="primary"
+                onClick={() =>
+                  conditionalAnalyze(
+                    targetList.length > 0 ? targetList : undefined,
+                  )
+                }
+              >
+                确认
+              </Button>
+            </Space>
+
+            <Space>
+              <Button type="primary">聚合数据</Button>
+            </Space>
+          </div>
         )}
       />
 

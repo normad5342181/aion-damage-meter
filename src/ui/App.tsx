@@ -5,6 +5,7 @@ import { Spin, UploadFile } from "antd";
 import UploadLog from "./page/upload-log";
 import { AnalyzedResult } from "../worker/read-log/types";
 import LogResult from "./page/log-result";
+// import { findRepeat } from "../worker/read-log/roles";
 
 function App() {
   const [pageLoading, setPageLoading] = useState<boolean>(false);
@@ -18,6 +19,8 @@ function App() {
     skillMap: new Map(),
     damageSourceMap: new Map(),
   });
+
+  // findRepeat();
 
   const updateLogResult = useCallback(
     ({

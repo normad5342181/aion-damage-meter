@@ -387,17 +387,17 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         } else {
           setMapValue(foundMinion.belong, row, "minion");
         }
-      }
-
-      // 再找技能
-      const roles = Object.keys(allSkillLib);
-      for (let index = 0; index < roles.length; index++) {
-        const currentRole = roles[index];
-        const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
-        if (currentRole !== "universal") {
-          // 排除火焰之祝福
-          if (roleSkills.includes(sourceName) && !sourceName.includes("火焰之祝福")) {
-            setMapValue(Role[currentRole as keyof typeof Role], row, "minion");
+      } else {
+        // 再找技能
+        const roles = Object.keys(allSkillLib);
+        for (let index = 0; index < roles.length; index++) {
+          const currentRole = roles[index];
+          const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
+          if (currentRole !== "universal") {
+            // 排除火焰之祝福
+            if (roleSkills.includes(sourceName) && !sourceName.includes("火焰之祝福")) {
+              setMapValue(Role[currentRole as keyof typeof Role], row, "minion");
+            }
           }
         }
       }

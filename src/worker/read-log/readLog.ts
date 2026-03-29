@@ -1,16 +1,9 @@
-import { calcArrayIntersection, removeTrailingRoman } from "../../ui/util";
+import { calcArrayIntersection, extractSkillName, removeTrailingRoman } from "../../ui/util";
 import { attackFilter } from "./attackFilter";
 import { NORMAL_ATTACK, Role } from "./constant";
 import { allSkillLib } from "./roles";
 import { tagFilter } from "./tagFilter";
-import {
-  AnalyzedResult,
-  Log,
-  MessageData,
-  DamageSource,
-  Skill,
-  Tag,
-} from "./types";
+import { AnalyzedResult, Log, MessageData, DamageSource, Skill, Tag } from "./types";
 
 // 用于符合日志规范的正则
 const usefulRegex = /^(\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2}) : (.*)$/;
@@ -98,9 +91,7 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
 
   // 处理DamageSource的role和race
   damageSourceMap.forEach((source) => {
-    const usedSkills = source.usedSkills
-      .filter((s) => s !== NORMAL_ATTACK)
-      .map((s) => removeTrailingRoman(s));
+    const usedSkills = source.usedSkills.filter((s) => s !== NORMAL_ATTACK).map((s) => removeTrailingRoman(s));
 
     const universalSkills = allSkillLib.universal;
     const roles = Object.keys(allSkillLib);
@@ -109,18 +100,14 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
       const currentRole = roles[index];
       const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
       if (currentRole !== "universal") {
-        const { intersection, onlyInArr2 } = calcArrayIntersection(
-          roleSkills,
-          usedSkills,
-        );
+        const { intersection, onlyInArr2 } = calcArrayIntersection(roleSkills, usedSkills);
 
         if (intersection.length >= 3) {
           // 用了三个以上的职业技能
           source.role = Role[currentRole as keyof typeof Role];
           break;
-        } else if (intersection.length >= 1) {
-          const { intersection: inter, onlyInArr2: only2 } =
-            calcArrayIntersection(universalSkills, usedSkills);
+        } else if (intersection.length >= 1 && !roleSkills.includes(extractSkillName(source.name) || "")) {
+          const { intersection: inter, onlyInArr2: only2 } = calcArrayIntersection(universalSkills, usedSkills);
           if (inter.length >= 1) {
             source.role = Role[currentRole as keyof typeof Role];
             break;

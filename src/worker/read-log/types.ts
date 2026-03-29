@@ -55,6 +55,8 @@ export interface DamageSource {
   usedSkills: string[];
   role?: Role;
   race?: Race;
+  prevDamageTime?: string;
+  allDamageTime?: number;
 }
 
 export interface AnalyzedResult {

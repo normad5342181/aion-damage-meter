@@ -5,19 +5,15 @@ import { DamageSource, DotSkill, Log, Skill } from "./types";
 const skillRegex =
   /(?:致命一击！)?(?:(?<userName>.+?))?使用(?<skillName>.+?)技能，对(?<targetName>.+?)造成了(?<damage>.+?)的伤害/;
 // 普攻暴击伤害的正则，只能记录自己的，其他人的普攻是否暴击没有记录
-const criticalAttackRegex =
-  /致命一击！(?:(?<userName>.+?))?给(?<targetName>.+?)造成了(?<damage>.+?)的致命一击伤害/;
+const criticalAttackRegex = /致命一击！(?:(?<userName>.+?))?给(?<targetName>.+?)造成了(?<damage>.+?)的致命一击伤害/;
 
 // 普攻伤害的正则，无法记录是否暴击
-const normalAttackRegex =
-  /(?:(?<userName>.+?))?给(?<targetName>.+?)造成了(?<damage>.+?)的伤害/;
+const normalAttackRegex = /(?:(?<userName>.+?))?给(?<targetName>.+?)造成了(?<damage>.+?)的伤害/;
 const normalAttack2Regex = /(?<userName>.+?)造成(?<damage>.+?)的伤害/;
 
 // 反弹伤害的正则，无法记录是否暴击
-const reflectAttackRegex =
-  /(?:(?<userName>.+?))?反弹了攻击，给(?<targetName>.+?)造成了(?<damage>.+?)的伤害/;
-const reflectAttack2Regex =
-  /(?:(?<targetName>.+?))?对(?<userName>.+?)的攻击被反弹，受到了(?<damage>.+?)的伤害/;
+const reflectAttackRegex = /(?:(?<userName>.+?))?反弹了攻击，给(?<targetName>.+?)造成了(?<damage>.+?)的伤害/;
+const reflectAttack2Regex = /(?:(?<targetName>.+?))?对(?<userName>.+?)的攻击被反弹，受到了(?<damage>.+?)的伤害/;
 
 // 施加持续伤害的正则，可能出现致命一击的前缀
 const dotSkillRegex =
@@ -35,8 +31,7 @@ const dotDamageRegex =
 const dotSkillMoreRegex =
   /(?:致命一击！)?(?:(?<userName>.+?))?使用(?<skillName>.+?)技能，(?<targetName>.+?)受到了(?<damage>.+?)的伤害/;
 // 额外需要处理的伤害技能：如延迟爆炸类，伤害后置
-const delaySkillRegex =
-  /(?:(?<userName>.+?))?使用(?<skillName>.+?)技能，(?<targetName>.+?)获得了(?<state>.+?)效果/;
+const delaySkillRegex = /(?:(?<userName>.+?))?使用(?<skillName>.+?)技能，(?<targetName>.+?)获得了(?<state>.+?)效果/;
 // 受到的dot技能，貌似不会记录队友的
 const takeDotRegex =
   /(?:(?<targetName>.+?))?受到(?<userName>.+?)使用的(?<skillName>.+?)的影响，受到了(?<damage>.+?)的伤害/;
@@ -65,23 +60,12 @@ function buildSkillKey({
   return `${sourceName}-${skillName}-${dateTime}`;
 }
 
-function buildDotSkillKey({
-  targetName,
-  skillName,
-}: {
-  targetName: string;
-  skillName: string;
-}) {
+function buildDotSkillKey({ targetName, skillName }: { targetName: string; skillName: string }) {
   return `${targetName}-${skillName}`;
 }
 
 // 记录dot类技能，供后续伤害提供伤害来源
-function recordDotSkill(
-  dateTime: string,
-  targetName: string,
-  skillName: string,
-  sourceName?: string,
-) {
+function recordDotSkill(dateTime: string, targetName: string, skillName: string, sourceName?: string) {
   const key = buildDotSkillKey({ targetName, skillName });
   // 从记录的信息中查找施加记录
   lastDotSkillMap.set(key, {
@@ -94,17 +78,31 @@ function recordDotSkill(
 
 // 记录玩家
 function recordDamageSource(
-  { name, skillName }: { name: string; skillName: string },
+  { name, skillName, dateTime, damage }: { name: string; skillName: string; dateTime: string; damage?: number },
   damageSourceMap: Map<string, DamageSource>,
 ) {
   const source = damageSourceMap.get(name);
   if (source) {
     const recorded = source.usedSkills.find((item) => item === skillName);
+    // 记录使用的技能
     if (!recorded) {
       source.usedSkills.push(skillName);
     }
+
+    // 记录伤害时间
+    if (dateTime && damage && damage > 0) {
+      if (source.prevDamageTime) {
+        const interval = new Date(dateTime).getTime() - new Date(source.prevDamageTime).getTime();
+        // 如果两次伤害时间间隔小于5秒，认为是同一次战斗，累计伤害时间
+        if (interval <= 1000 * 5) {
+          source.allDamageTime = (source.allDamageTime || 0) + interval;
+        }
+      }
+
+      source.prevDamageTime = dateTime;
+    }
   } else {
-    damageSourceMap.set(name, { name, usedSkills: [skillName] });
+    damageSourceMap.set(name, { name, usedSkills: [skillName], prevDamageTime: dateTime, allDamageTime: 0 });
   }
 }
 
@@ -130,10 +128,7 @@ function recordAllSkill(
   damageSourceMap: Map<string, DamageSource>,
   skillMap: Map<string, Skill>,
 ) {
-  recordDamageSource(
-    { name: sourceName || PLAYER_SELF, skillName },
-    damageSourceMap,
-  );
+  recordDamageSource({ name: sourceName || PLAYER_SELF, skillName, dateTime, damage }, damageSourceMap);
 
   const skillKey = buildSkillKey({
     sourceName: sourceName || PLAYER_SELF,
@@ -144,10 +139,7 @@ function recordAllSkill(
   const skill = skillMap.get(skillKey);
 
   if (skill) {
-    updateSkill(
-      { dateTime, skillName, sourceName, targetName, damage },
-      skillMap,
-    );
+    updateSkill({ dateTime, skillName, sourceName, targetName, damage }, skillMap);
   } else {
     skillMap.set(skillKey, {
       dateTime,
@@ -191,9 +183,7 @@ function updateSkill(
   const foundskill = skillMap.get(skillKey);
 
   if (foundskill) {
-    const targetObj = foundskill.targetObjects?.find(
-      (t) => t.targetName === targetName,
-    );
+    const targetObj = foundskill.targetObjects?.find((t) => t.targetName === targetName);
 
     // 已有伤害目标
     if (targetObj) {
@@ -220,13 +210,7 @@ interface IProps {
   damageSourceMap: Map<string, DamageSource>;
   skillMap: Map<string, Skill>;
 }
-export function attackFilter({
-  logTime,
-  logContent,
-  logList,
-  damageSourceMap,
-  skillMap,
-}: IProps) {
+export function attackFilter({ logTime, logContent, logList, damageSourceMap, skillMap }: IProps) {
   let matched = true;
 
   if (logContent.match(skillRegex)) {
@@ -268,12 +252,7 @@ export function attackFilter({
       );
 
       // 有些dot在本人日志和队友日志中表现不一，这里做一个所有技能的记录算了，狗屎盛趣
-      recordDotSkill(
-        logTime,
-        match.groups.targetName,
-        match.groups.skillName,
-        match.groups.userName || PLAYER_SELF,
-      );
+      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
     }
   } else if (logContent.match(criticalAttackRegex)) {
     /*
@@ -310,10 +289,7 @@ export function attackFilter({
         skillMap,
       );
     }
-  } else if (
-    logContent.match(reflectAttackRegex) ||
-    logContent.match(reflectAttack2Regex)
-  ) {
+  } else if (logContent.match(reflectAttackRegex) || logContent.match(reflectAttack2Regex)) {
     /*
      * 伤害日志 反弹伤害
      * eg: 反弹了攻击，给火焰支配者塔哈巴塔造成了50的伤害。
@@ -322,9 +298,7 @@ export function attackFilter({
      * 普通伤害的正则也会匹配反弹伤害，必须放在前面
      * 这里就不改正则了
      */
-    const match =
-      logContent.match(reflectAttackRegex) ||
-      logContent.match(reflectAttack2Regex);
+    const match = logContent.match(reflectAttackRegex) || logContent.match(reflectAttack2Regex);
     if (match?.groups) {
       logList.push({
         dateTime: logTime,
@@ -354,18 +328,13 @@ export function attackFilter({
         skillMap,
       );
     }
-  } else if (
-    logContent.match(normalAttackRegex) ||
-    logContent.match(normalAttack2Regex)
-  ) {
+  } else if (logContent.match(normalAttackRegex) || logContent.match(normalAttack2Regex)) {
     /*
      * 伤害日志 普攻伤害
      * eg: 嗷嗷小脑虎给火焰支配者塔哈巴塔造成了881的伤害。
      * 天人祭司的冤魂造成891的伤害。
      */
-    const match =
-      logContent.match(normalAttackRegex) ||
-      logContent.match(normalAttack2Regex);
+    const match = logContent.match(normalAttackRegex) || logContent.match(normalAttack2Regex);
     if (match?.groups) {
       logList.push({
         dateTime: logTime,
@@ -395,24 +364,15 @@ export function attackFilter({
         skillMap,
       );
     }
-  } else if (
-    logContent.match(dotSkillRegex) ||
-    logContent.match(dotSkill2Regex)
-  ) {
+  } else if (logContent.match(dotSkillRegex) || logContent.match(dotSkill2Regex)) {
     /*
      * 施加持续伤害的正则
      * eg: 林酱油使用愤怒之漩涡 I技能，对火焰支配者塔哈巴塔造成了持续伤害效果。
      * eg: 丶那个护法使用风之刃 IV技能，天人战士的冤魂陷入周期性生命减少状态。
      */
-    const match =
-      logContent.match(dotSkillRegex) || logContent.match(dotSkill2Regex);
+    const match = logContent.match(dotSkillRegex) || logContent.match(dotSkill2Regex);
     if (match?.groups) {
-      recordDotSkill(
-        logTime,
-        match.groups.targetName,
-        match.groups.skillName,
-        match.groups.userName || PLAYER_SELF,
-      );
+      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
 
       recordAllSkill(
         {
@@ -447,9 +407,7 @@ export function attackFilter({
         dateTime: logTime,
         content: logContent,
         damageDetail: {
-          sourceName: foundSkill
-            ? foundSkill.sourceName
-            : match.groups?.skillName, // 存在截取日志中没有找到dot伤害来源，或者伤害神石之类的来源
+          sourceName: foundSkill ? foundSkill.sourceName : match.groups?.skillName, // 存在截取日志中没有找到dot伤害来源，或者伤害神石之类的来源
           skillName: match.groups.skillName,
           targetName: match.groups.targetName,
           damage: Number(match.groups.damage.replace(/,/g, "")),
@@ -458,6 +416,16 @@ export function attackFilter({
           isDot: true,
         },
       });
+
+      recordDamageSource(
+        {
+          name: foundSkill ? foundSkill.sourceName : match.groups?.skillName,
+          skillName: match.groups.skillName,
+          dateTime: logTime,
+          damage: Number(match.groups.damage.replace(/,/g, "")),
+        },
+        damageSourceMap,
+      );
 
       if (foundSkill) {
         updateSkill(
@@ -480,12 +448,7 @@ export function attackFilter({
      */
     const match = logContent.match(dotSkillMoreRegex);
     if (match?.groups) {
-      recordDotSkill(
-        logTime,
-        match.groups.targetName,
-        match.groups.skillName,
-        match.groups.userName || PLAYER_SELF,
-      );
+      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
 
       // 计算伤害
       logList.push({
@@ -524,12 +487,7 @@ export function attackFilter({
     const match = logContent.match(delaySkillRegex);
     if (match?.groups) {
       // 记录dot
-      recordDotSkill(
-        logTime,
-        match.groups.targetName,
-        match.groups.skillName,
-        match.groups.userName || PLAYER_SELF,
-      );
+      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
 
       recordAllSkill(
         {

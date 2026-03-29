@@ -219,6 +219,17 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
     {
       title: "DPS",
       dataIndex: "dps",
+      render: (_, row) => {
+        if (row?.children && row?.children?.length > 0) {
+          const childrenCount = row?.children?.reduce((count, cur) => count + cur.damageCount, 0) || 0;
+          return (
+            ((row.damageCount + childrenCount) / (damageSourceMap.get(row.damageSource)?.allDamageTime || 1)) *
+            1000
+          ).toFixed(2);
+        } else {
+          return row.dps?.toFixed(2);
+        }
+      },
     },
     {
       title: "暴击率",
@@ -302,7 +313,9 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         criticalRate: damageObject[key].criticalTimes
           ? (damageObject[key].criticalTimes / damageObject[key].skillTimes) * 100
           : 0,
-        dps: 0,
+        dps: damageSourceMap.get(key)?.allDamageTime
+          ? (1000 * damageObject[key].count) / (damageSourceMap.get(key)?.allDamageTime || 1)
+          : 0,
         role: damageSourceMap.get(key)?.role || matchSpecialRole(key),
       }))
       .sort((a, b) => b.damageCount - a.damageCount);

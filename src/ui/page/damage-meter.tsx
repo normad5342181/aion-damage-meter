@@ -1,14 +1,4 @@
-import {
-  Button,
-  Divider,
-  Input,
-  InputRef,
-  Select,
-  Space,
-  Table,
-  TableProps,
-  Tag,
-} from "antd";
+import { Button, Divider, Input, InputRef, message, Select, Space, Table, TableProps, Tag } from "antd";
 import { DamageSource, Log, Skill } from "../../worker/read-log/types";
 import { useEffect, useRef, useState } from "react";
 import { bosses, NORMAL_ATTACK, Role } from "../../worker/read-log/constant";
@@ -16,7 +6,7 @@ import SkillModal, { SkillModalProps } from "./skill-modal";
 import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import { FilterValue } from "antd/es/table/interface";
-import { getRoleFilters, matchSpecialRole, removeTrailingRoman } from "../util";
+import { extractSkillName, getRoleFilters, isStarRole, matchSpecialRole } from "../util";
 import { signedMinions } from "../../worker/read-log/roles/minion";
 import { allSkillLib } from "../../worker/read-log/roles";
 
@@ -28,6 +18,9 @@ interface DataType {
   damageCount: number;
   dps: number;
   criticalRate: number;
+  isMinion?: boolean;
+  parentRole?: Role;
+  parentName?: string;
   childrenPer?: number;
   children?: DataType[];
 }
@@ -45,9 +38,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
   // 筛选的伤害目标
   const [targetList, setTargetList] = useState<string[]>([]);
   // 技能弹窗
-  const [skillModalProps, setSkillModalProps] = useState<
-    Partial<SkillModalProps>
-  >({
+  const [skillModalProps, setSkillModalProps] = useState<Partial<SkillModalProps>>({
     open: false,
     sourceName: "",
     filteredTargets: [],
@@ -58,9 +49,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
   // 已经筛选的列
   const [filteredColumns, seFilteredColumns] = useState<(keyof DataType)[]>([]);
   // 用来存放各列的 filteredValue 状态
-  const [filteredValues, setFilteredValues] = useState<
-    Record<string, FilterValue | null>
-  >({});
+  const [filteredValues, setFilteredValues] = useState<Record<string, FilterValue | null>>({});
 
   const hasInitalized = useRef(false);
   // const allSources = useRef<string[]>([]);
@@ -100,30 +89,25 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       title: "序号",
       dataIndex: "index",
       rowScope: "row",
+      width: 100,
       render: (_, __, index) => index,
     },
     {
       title: "伤害源",
       dataIndex: "damageSource",
-      filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
-      ),
+      filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />,
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm }) => (
         <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
           <Input
             ref={searchInput}
             placeholder={`多个关键字用逗号分隔`}
             value={selectedKeys[0]}
-            onChange={(e) =>
-              setSelectedKeys(e.target.value ? [e.target.value] : [])
-            }
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
             onPressEnter={() => {
               confirm();
               setSourceSearchText(selectedKeys[0] as string);
               seFilteredColumns(
-                filteredColumns.includes("damageSource")
-                  ? [...filteredColumns]
-                  : [...filteredColumns, "damageSource"],
+                filteredColumns.includes("damageSource") ? [...filteredColumns] : [...filteredColumns, "damageSource"],
               );
             }}
             style={{ marginBottom: 8, display: "block" }}
@@ -149,9 +133,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
             <Button
               onClick={() => {
                 setSourceSearchText("");
-                seFilteredColumns(
-                  filteredColumns.filter((c) => c !== "damageSource"),
-                );
+                seFilteredColumns(filteredColumns.filter((c) => c !== "damageSource"));
                 setFilteredValues({ ...filteredValues, damageSource: null });
                 confirm();
               }}
@@ -167,7 +149,8 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         // 将value转换为数组，分隔符可以是中英文的任意逗号
         const valList = value.toString().split(/,|，/);
         const sourceStr = record.damageSource.toString().toLowerCase();
-        return valList.some((v) => sourceStr.includes(v.toLowerCase()));
+        const parentSourceStr = record.parentName?.toString()?.toLowerCase() || "";
+        return valList.some((v) => sourceStr.includes(v.toLowerCase()) || parentSourceStr.includes(v.toLowerCase()));
       },
       filterDropdownProps: {
         onOpenChange(open) {
@@ -177,7 +160,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         },
       },
       filteredValue: filteredValues?.damageSource,
-      render: (text) =>
+      render: (text, row) =>
         filteredColumns.includes("damageSource") ? (
           <Highlighter
             highlightStyle={{ backgroundColor: "#ffc069", padding: 0 }}
@@ -186,22 +169,21 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
             textToHighlight={text ? text.toString() : ""}
           />
         ) : (
-          text
+          <span style={row.isMinion ? { paddingLeft: 20, color: "var(--ant-color-text-secondary)" } : {}}>{text}</span>
         ),
     },
     {
       title: "聚合伤害源",
       dataIndex: "childrenPer",
       render: (_, row) => {
-        console.log("row", row);
         if (row?.children && row?.children?.length > 0) {
           return (
             <>
-              {row.children.forEach((e) => (
+              <span style={{ color: "#f50" }}>
+                {(row?.childrenPer || 0) > 0.9999 ? "" : `${((row?.childrenPer || 0) * 100).toFixed(1)}%`}{" "}
+              </span>
+              {row.children.map((e) => (
                 <Tag key={e.damageSource} variant="filled">
-                  {(row?.childrenPer || 0) >= 0.99999999
-                    ? ""
-                    : `${((row?.childrenPer || 0) * 100).toFixed(1)}%`}{" "}
                   {e.damageSource}
                 </Tag>
               ))}
@@ -219,7 +201,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       filterMultiple: true,
       filteredValue: filteredValues?.role,
       onFilter: (value, record) => {
-        return record.role === value;
+        return record.role === value || record.parentRole === value;
       },
     },
     {
@@ -227,11 +209,8 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       dataIndex: "damageCount",
       render: (_, row) => {
         if (row?.children && row?.children?.length > 0) {
-          const childrenCount = row?.children?.reduce(
-            (count, cur) => count + cur.damageCount,
-            0,
-          );
-          return row.damageCount + (row.childrenPer || 0) * childrenCount;
+          const childrenCount = row?.children?.reduce((count, cur) => count + cur.damageCount, 0);
+          return row.damageCount + Number(((row.childrenPer || 0) * childrenCount).toFixed(0));
         } else {
           return row.damageCount;
         }
@@ -299,10 +278,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         // 已有的伤害来源
         if (damageObject[source]) {
           damageObject[source].count += damageDetail.damage;
-          if (
-            damageDetail.skillName !== NORMAL_ATTACK &&
-            damageDetail.isCritical
-          ) {
+          if (damageDetail.skillName !== NORMAL_ATTACK && damageDetail.isCritical) {
             damageObject[source].criticalTimes += 1;
           }
           if (damageDetail.skillName !== NORMAL_ATTACK && !damageDetail.isDot) {
@@ -311,10 +287,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         } else {
           damageObject[source] = {
             count: damageDetail.damage,
-            skillTimes:
-              damageDetail.skillName !== NORMAL_ATTACK && !damageDetail.isDot
-                ? 1
-                : 0,
+            skillTimes: damageDetail.skillName !== NORMAL_ATTACK && !damageDetail.isDot ? 1 : 0,
             criticalTimes: damageDetail.isCritical ? 1 : 0,
           };
         }
@@ -327,8 +300,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
         damageSource: key,
         damageCount: damageObject[key].count,
         criticalRate: damageObject[key].criticalTimes
-          ? (damageObject[key].criticalTimes / damageObject[key].skillTimes) *
-            100
+          ? (damageObject[key].criticalTimes / damageObject[key].skillTimes) * 100
           : 0,
         dps: 0,
         role: damageSourceMap.get(key)?.role || matchSpecialRole(key),
@@ -341,6 +313,13 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
   };
 
   const combineData = () => {
+    // 当玩家太多时，不做聚合
+    const starLen = dataSource.filter((x) => isStarRole(x.role))?.length;
+    if (starLen >= 100) {
+      message.warning("当前玩家超过100，不做聚合。");
+      return;
+    }
+
     const roleMap = new Map<
       Role,
       {
@@ -349,11 +328,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       }
     >();
 
-    const setMapValue = (
-      key: Role,
-      val: DataType,
-      type: "master" | "minion",
-    ) => {
+    const setMapValue = (key: Role, val: DataType, type: "master" | "minion") => {
       const oldValue = roleMap.get(key);
       if (type === "master") {
         if (oldValue) {
@@ -383,28 +358,14 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
     };
 
     dataSource.forEach((row) => {
-      const sourceName = removeTrailingRoman(row.damageSource);
+      const sourceName = extractSkillName(row.damageSource) || "";
       const rowRole = row.role;
-      if (
-        rowRole &&
-        [
-          Role.Templar,
-          Role.Gladiator,
-          Role.Assassin,
-          Role.Ranger,
-          Role.Cleric,
-          Role.Sorcerer,
-          Role.Spiritmaster,
-          Role.Chanter,
-        ].includes(rowRole)
-      ) {
+      if (rowRole && isStarRole(rowRole)) {
         setMapValue(rowRole, row, "master");
       }
 
       // 先找召唤物
-      const foundMinion = signedMinions.find(
-        (minion) => minion.name === sourceName,
-      );
+      const foundMinion = signedMinions.find((minion) => minion.name === sourceName);
       if (foundMinion) {
         if (Array.isArray(foundMinion.belong)) {
           foundMinion.belong.forEach((belong) => {
@@ -419,11 +380,10 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       const roles = Object.keys(allSkillLib);
       for (let index = 0; index < roles.length; index++) {
         const currentRole = roles[index];
-        const roleSkills = (allSkillLib as Record<string, string[]>)[
-          currentRole
-        ];
+        const roleSkills = (allSkillLib as Record<string, string[]>)[currentRole];
         if (currentRole !== "universal") {
-          if (roleSkills.includes(sourceName)) {
+          // 排除火焰之祝福
+          if (roleSkills.includes(sourceName) && !sourceName.includes("火焰之祝福")) {
             setMapValue(Role[currentRole as keyof typeof Role], row, "minion");
           }
         }
@@ -433,11 +393,8 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
     const newDataSource: DataType[] = [];
 
     let allMinionStrs: string[] = [];
-
     for (const value of roleMap.values()) {
-      allMinionStrs = allMinionStrs.concat(
-        value.minions.map((x) => x.damageSource),
-      );
+      allMinionStrs = allMinionStrs.concat(value.minions.map((x) => x.damageSource));
     }
 
     dataSource.forEach((row) => {
@@ -445,21 +402,19 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       const damageSource = row.damageSource;
       if (rowRole) {
         const about = roleMap.get(rowRole);
-        if (
-          about?.masters?.map((x) => x.damageSource)?.includes(damageSource) &&
-          about?.minions?.length > 0
-        ) {
-          const masterAllDamage = about?.masters.reduce(
-            (count, cur) => count + cur.damageCount,
-            0,
-          );
+        if (about?.masters?.map((x) => x.damageSource)?.includes(damageSource) && about?.minions?.length > 0) {
+          // TODO 这里处理风之约定的时候有点问题，风之约定奶妈和护法都有，跨职业计算比例，这里姑且全都算比例1
+          const masterAllDamage = about?.masters.reduce((count, cur) => count + cur.damageCount, 0);
 
           const percent = row.damageCount / masterAllDamage;
           const perMinions = about?.minions?.map((x) => ({
             ...x,
             key: `${damageSource}-${x.damageSource}`,
-            damageCount: x.damageCount * percent,
+            damageCount: Number((x.damageCount * percent).toFixed(0)),
             dps: x.dps * percent,
+            isMinion: true,
+            parentRole: rowRole,
+            parentName: row.damageSource,
           }));
 
           newDataSource.push({
@@ -473,7 +428,13 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
       }
     });
 
-    setDataSource(newDataSource);
+    setDataSource(
+      newDataSource.sort((a, b) => {
+        const childrenCount1 = a?.children?.reduce((count, cur) => count + cur.damageCount, 0) || 0;
+        const childrenCount2 = b?.children?.reduce((count, cur) => count + cur.damageCount, 0) || 0;
+        return b.damageCount + childrenCount2 - (a.damageCount + childrenCount1);
+      }),
+    );
   };
 
   return (
@@ -522,9 +483,7 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
                         type="text"
                         onClick={() => {
                           const bossList = bosses.map((boss) => boss.name);
-                          const namedBoss = bossList.filter((boss) =>
-                            allTargets.current.includes(boss),
-                          );
+                          const namedBoss = bossList.filter((boss) => allTargets.current.includes(boss));
                           setTargetList(namedBoss);
                         }}
                       >
@@ -535,24 +494,13 @@ function DamageMeter({ logList, skillMap, damageSourceMap }: IProps) {
                 )}
               />
 
-              <Button
-                type="primary"
-                onClick={() =>
-                  conditionalAnalyze(
-                    targetList.length > 0 ? targetList : undefined,
-                  )
-                }
-              >
+              <Button type="primary" onClick={() => conditionalAnalyze(targetList.length > 0 ? targetList : undefined)}>
                 确认
               </Button>
             </Space>
 
             <Space>
-              <Button
-                type="primary"
-                disabled={dataSource.length === 0}
-                onClick={combineData}
-              >
+              <Button type="primary" disabled={dataSource.length === 0} onClick={combineData}>
                 聚合数据
               </Button>
             </Space>

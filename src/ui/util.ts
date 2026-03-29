@@ -14,9 +14,7 @@ export function calcTimelineItemHeight(
   baseHeight: number = 50,
 ): number {
   // 确保时间差为正数
-  const duration = Math.abs(
-    new Date(endTime).getTime() - new Date(startTime).getTime(),
-  );
+  const duration = Math.abs(new Date(endTime).getTime() - new Date(startTime).getTime());
 
   // 定义时间阈值 (毫秒)
   const TEN_SECONDS = 10 * 1000;
@@ -60,6 +58,13 @@ const ROMAN_REGEX = / (I|II|III|IV|V|VI|VII|VIII|IX|X)$/;
 export const removeTrailingRoman = (str: string): string => {
   return str.trim().replace(ROMAN_REGEX, "").trim();
 };
+
+// 提取技能名称
+export function extractSkillName(input: string): string | null {
+  const regex = /^(.+?)(?:\s+([IVXⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+))?(?:\s+效果)?$/i;
+  const match = input.trim().match(regex);
+  return match ? match[1].trim() : null;
+}
 
 export function getRoleFilters() {
   // 遍历枚举对象
@@ -120,8 +125,7 @@ export function calcArrayIntersection<T extends string>(
     };
 
   // 优化：用较小的数组创建 Set，节省内存
-  const [smaller, larger] =
-    arr1.length <= arr2.length ? [arr1, arr2] : [arr2, arr1];
+  const [smaller, larger] = arr1.length <= arr2.length ? [arr1, arr2] : [arr2, arr1];
   const isArr1Smaller = arr1.length <= arr2.length;
 
   const smallSet = new Set(smaller);
@@ -164,21 +168,29 @@ export function calcArrayIntersection<T extends string>(
 }
 
 export function matchSpecialRole(sourceName: string): Role {
-  if (
-    sourceName.endsWith("精灵") ||
-    sourceName.endsWith("气息") ||
-    sourceName === "攻城兵器"
-  ) {
+  if (sourceName.endsWith("精灵") || sourceName.endsWith("气息") || sourceName === "攻城兵器") {
     return Role.Minion;
   } else if (sourceName.endsWith("属性)伤害效果")) {
     return Role.Godstone;
-  } else if (
-    sourceName.endsWith("效果") ||
-    sourceName.endsWith("效果果") ||
-    sourceName === "冰柱"
-  ) {
+  } else if (sourceName.endsWith("效果") || sourceName.endsWith("效果果") || sourceName === "冰柱") {
     return Role.Skill;
   } else {
     return Role.Other;
   }
+}
+
+export function isStarRole(role?: string | Role): boolean {
+  return Boolean(
+    role &&
+    [
+      Role.Templar,
+      Role.Gladiator,
+      Role.Assassin,
+      Role.Ranger,
+      Role.Cleric,
+      Role.Sorcerer,
+      Role.Spiritmaster,
+      Role.Chanter,
+    ].includes(role as Role),
+  );
 }

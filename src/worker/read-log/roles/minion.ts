@@ -60,6 +60,10 @@ export const signedMinions: Minion[] = [
     name: "风之约定",
     belong: [Role.Chanter, Role.Cleric],
   },
+  {
+    name: "风之约定效果",
+    belong: [Role.Chanter, Role.Cleric],
+  },
   // {
   //   name: "风之祝福",
   //   belong: Role.Chanter,

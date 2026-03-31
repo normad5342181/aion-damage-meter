@@ -1,5 +1,6 @@
 import { NORMAL_ATTACK, PLAYER_SELF, REFLECT_ATTACK } from "./constant";
 import { DamageSource, DotSkill, Log, Skill } from "./types";
+import { buildDotSkillKey, recordAllSkill, recordDamageSource, recordDotSkill, updateSkill } from "./util";
 
 // 技能伤害的正则
 const skillRegex =
@@ -44,164 +45,7 @@ const protectRegex =
 const otherSkillRegex = /(?:(?<userName>.+?))?使用(?<skillName>.+?)技能，/;
 
 // 某个dot技能最后一次释放的记录
-// const lastDotSkills: DotSkill[] = [];
 const lastDotSkillMap: Map<string, DotSkill> = new Map();
-
-function buildSkillKey({
-  dateTime,
-  sourceName,
-  skillName,
-}: {
-  dateTime: string;
-  sourceName: string;
-  skillName: string;
-}) {
-  sourceName = sourceName || PLAYER_SELF;
-  return `${sourceName}-${skillName}-${dateTime}`;
-}
-
-function buildDotSkillKey({ targetName, skillName }: { targetName: string; skillName: string }) {
-  return `${targetName}-${skillName}`;
-}
-
-// 记录dot类技能，供后续伤害提供伤害来源
-function recordDotSkill(dateTime: string, targetName: string, skillName: string, sourceName?: string) {
-  const key = buildDotSkillKey({ targetName, skillName });
-  // 从记录的信息中查找施加记录
-  lastDotSkillMap.set(key, {
-    dateTime,
-    sourceName: sourceName || PLAYER_SELF,
-    skillName,
-    targetName,
-  });
-}
-
-// 记录玩家
-function recordDamageSource(
-  { name, skillName, dateTime, damage }: { name: string; skillName: string; dateTime: string; damage?: number },
-  damageSourceMap: Map<string, DamageSource>,
-) {
-  const source = damageSourceMap.get(name);
-  if (source) {
-    const recorded = source.usedSkills.find((item) => item === skillName);
-    // 记录使用的技能
-    if (!recorded) {
-      source.usedSkills.push(skillName);
-    }
-
-    // 记录伤害时间
-    if (dateTime && damage && damage > 0) {
-      if (source.prevDamageTime) {
-        const interval = new Date(dateTime).getTime() - new Date(source.prevDamageTime).getTime();
-        // 如果两次伤害时间间隔小于5秒，认为是同一次战斗，累计伤害时间
-        if (interval <= 1000 * 5) {
-          source.allDamageTime = (source.allDamageTime || 0) + interval;
-        }
-      }
-
-      source.prevDamageTime = dateTime;
-    }
-  } else {
-    damageSourceMap.set(name, { name, usedSkills: [skillName], prevDamageTime: dateTime, allDamageTime: 0 });
-  }
-}
-
-// 记录所有技能使用情况
-function recordAllSkill(
-  {
-    dateTime,
-    skillName,
-    targetName,
-    sourceName,
-    isCritical,
-    isDot,
-    damage,
-  }: {
-    dateTime: string;
-    skillName: string;
-    targetName?: string;
-    sourceName?: string;
-    isCritical?: boolean;
-    isDot?: boolean;
-    damage?: number;
-  },
-  damageSourceMap: Map<string, DamageSource>,
-  skillMap: Map<string, Skill>,
-) {
-  recordDamageSource({ name: sourceName || PLAYER_SELF, skillName, dateTime, damage }, damageSourceMap);
-
-  const skillKey = buildSkillKey({
-    sourceName: sourceName || PLAYER_SELF,
-    skillName,
-    dateTime,
-  });
-
-  const skill = skillMap.get(skillKey);
-
-  if (skill) {
-    updateSkill({ dateTime, skillName, sourceName, targetName, damage }, skillMap);
-  } else {
-    skillMap.set(skillKey, {
-      dateTime,
-      sourceName: sourceName || PLAYER_SELF,
-      skillName,
-      isDot: isDot ?? false,
-      targetObjects: [
-        {
-          targetName: targetName || "",
-          isCritical: isCritical ?? false,
-          damage: damage ?? 0,
-        },
-      ],
-    });
-  }
-}
-
-//更新记录的技能伤害
-function updateSkill(
-  {
-    dateTime,
-    skillName,
-    sourceName,
-    targetName,
-    damage,
-  }: {
-    dateTime?: string;
-    skillName: string;
-    sourceName?: string;
-    targetName?: string;
-    damage?: number;
-  },
-  skillMap: Map<string, Skill>,
-) {
-  const skillKey = buildSkillKey({
-    sourceName: sourceName || PLAYER_SELF,
-    skillName,
-    dateTime: dateTime || "",
-  });
-
-  const foundskill = skillMap.get(skillKey);
-
-  if (foundskill) {
-    const targetObj = foundskill.targetObjects?.find((t) => t.targetName === targetName);
-
-    // 已有伤害目标
-    if (targetObj) {
-      // 更新伤害
-      if (damage) {
-        targetObj.damage = (targetObj.damage || 0) + damage;
-      }
-    } else {
-      // 更新伤害目标
-      if (targetName) {
-        foundskill.targetObjects = [
-          ...foundskill.targetObjects,
-          { targetName, damage: damage || 0, isCritical: false },
-        ];
-      }
-    }
-  }
-}
 
 interface IProps {
   logTime: string;
@@ -252,7 +96,13 @@ export function attackFilter({ logTime, logContent, logList, damageSourceMap, sk
       );
 
       // 有些dot在本人日志和队友日志中表现不一，这里做一个所有技能的记录算了，狗屎盛趣
-      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
+      recordDotSkill(
+        logTime,
+        match.groups.targetName,
+        match.groups.skillName,
+        match.groups.userName || PLAYER_SELF,
+        lastDotSkillMap,
+      );
     }
   } else if (logContent.match(criticalAttackRegex)) {
     /*
@@ -372,7 +222,13 @@ export function attackFilter({ logTime, logContent, logList, damageSourceMap, sk
      */
     const match = logContent.match(dotSkillRegex) || logContent.match(dotSkill2Regex);
     if (match?.groups) {
-      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
+      recordDotSkill(
+        logTime,
+        match.groups.targetName,
+        match.groups.skillName,
+        match.groups.userName || PLAYER_SELF,
+        lastDotSkillMap,
+      );
 
       recordAllSkill(
         {
@@ -448,7 +304,13 @@ export function attackFilter({ logTime, logContent, logList, damageSourceMap, sk
      */
     const match = logContent.match(dotSkillMoreRegex);
     if (match?.groups) {
-      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
+      recordDotSkill(
+        logTime,
+        match.groups.targetName,
+        match.groups.skillName,
+        match.groups.userName || PLAYER_SELF,
+        lastDotSkillMap,
+      );
 
       // 计算伤害
       logList.push({
@@ -487,7 +349,13 @@ export function attackFilter({ logTime, logContent, logList, damageSourceMap, sk
     const match = logContent.match(delaySkillRegex);
     if (match?.groups) {
       // 记录dot
-      recordDotSkill(logTime, match.groups.targetName, match.groups.skillName, match.groups.userName || PLAYER_SELF);
+      recordDotSkill(
+        logTime,
+        match.groups.targetName,
+        match.groups.skillName,
+        match.groups.userName || PLAYER_SELF,
+        lastDotSkillMap,
+      );
 
       recordAllSkill(
         {

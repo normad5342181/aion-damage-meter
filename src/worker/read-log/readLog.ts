@@ -15,6 +15,10 @@ let logList: Log[] = [];
 let tagList: Tag[] = [];
 const skillMap: Map<string, Skill> = new Map();
 const damageSourceMap: Map<string, DamageSource> = new Map();
+// 已经攻击过的命名怪
+let usedBosses: string[] = [];
+// 已经加入的整点Tag
+let usedHourlyTag: string[] = [];
 
 async function readLine(file: File) {
   // 先读取原始文件内容，一行一行解析
@@ -70,7 +74,7 @@ function filterLog(lines: string[], dateTimeRange?: [number, number]) {
         if (new Date(logTime).getTime() > new Date(endTime).getTime()) {
           endTime = logTime;
         }
-        tagFilter(logTime, logContent, tagList);
+        tagFilter(logTime, logContent, tagList, usedBosses, usedHourlyTag);
       } else {
         // 过滤时间范围内的日志
         if (
@@ -136,6 +140,8 @@ async function readLog(file: File, dateTimeRange?: [number, number]) {
   tagList = [];
   skillMap.clear();
   damageSourceMap.clear();
+  usedBosses = [];
+  usedHourlyTag = [];
 
   // 先读取原始文件内容，一行一行解析
   const lines = await readLine(file);

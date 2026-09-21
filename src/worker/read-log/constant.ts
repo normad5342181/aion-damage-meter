@@ -1,6 +1,8 @@
 import { darkPuertaBosses } from "./instance/dark-puerta";
+import { fortressBosses } from "./instance/fortress";
 
-export const bosses = [...darkPuertaBosses];
+
+export const bosses = [...darkPuertaBosses,...fortressBosses];
 
 export const PLAYER_SELF = "__我自己__";
 
